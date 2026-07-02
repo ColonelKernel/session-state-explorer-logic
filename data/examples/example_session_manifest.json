@@ -1,0 +1,25 @@
+{
+  "schema_version": "0.1.0",
+  "session_name": "Logic Indie Mix Evidence Demo",
+  "daw_name": "Logic Pro",
+  "daw_version": "11",
+  "source_type": "logic_exports",
+  "audio_files": [
+    {
+      "file_name": "05_Lead_Vocal_Bounce.wav",
+      "role": "Vocal",
+      "notes": "Lead vocal printed post-insert, post-fader"
+    },
+    {
+      "file_name": "01_Drums_Bounce.wav",
+      "role": "Drums",
+      "notes": "Drum bus stem, printed with bus compression"
+    },
+    {
+      "file_name": "02_Bass_Bounce.wav",
+      "role": "Bass",
+      "notes": "DI + amp, exported dry"
+    }
+  ],
+  "notes": "Exported post-fader stems and a stereo mix. Automation and sends are not represented in the exports."
+}
