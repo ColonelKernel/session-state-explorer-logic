@@ -1,20 +1,28 @@
 """Filename-based track-role inference.
 
 Role inference here is deliberately transparent: it is keyword matching over
-normalised filenames, and every result carries a confidence score and a
-human-readable explanation. It makes no claim about the *actual* content of a
+the *tokens* of a filename, and every result carries a confidence score and a
+human-readable explanation. It makes no claim about the actual content of a
 stem beyond what its name suggests.
 
-Mixdown detection is split into *strong* and *weak* keywords. Strong keywords
-("stereo mix", "master", …) mark a mixdown outright. Weak keywords ("mix",
-"bounce") only mark a mixdown when the filename carries no instrument-role
-keyword — this is what lets ``05_Lead_Vocal_Bounce.wav`` be read as a vocal
-stem rather than a full mix, even though Logic names bounced stems "…Bounce".
+Two design points matter for real-world Logic exports:
+
+1. Matching is token-based, not substring-based, so ``Refrain_Guitar.wav`` is
+   a guitar stem (not a "ref"-erence) and ``Take3`` never matches anything.
+2. Mixdown detection is split into *strong* and *weak* keywords. Strong
+   keywords ("stereo mix", "master", "mixdown") mark a mixdown outright. Weak
+   keywords ("mix", "bounce", "stereo", "final") only mark a mixdown when the
+   filename carries no instrument-role token — this is what lets
+   ``05_Lead_Vocal_Bounce.wav``, ``Acoustic_Guitar_Stereo.wav`` and
+   ``Final_Vocal_Comp.wav`` be read as stems, even though Logic and producers
+   routinely decorate stem names with "Bounce", "Stereo" and "Final".
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+
+from .matching import tokenize, tokens_equal
 
 # Instrument / production-role keywords, checked in order.
 INSTRUMENT_ROLE_KEYWORDS: dict[str, list[str]] = {
@@ -29,8 +37,8 @@ INSTRUMENT_ROLE_KEYWORDS: dict[str, list[str]] = {
     "Bus": ["bus", "group", "aux", "stem"],
 }
 
-STRONG_MIXDOWN_KEYWORDS = ["full mix", "stereo mix", "mixdown", "master", "stereo", "final"]
-WEAK_MIXDOWN_KEYWORDS = ["mix", "bounce"]
+STRONG_MIXDOWN_KEYWORDS = ["full mix", "stereo mix", "mixdown", "master"]
+WEAK_MIXDOWN_KEYWORDS = ["mix", "bounce", "stereo", "final"]
 MIXDOWN_KEYWORDS = STRONG_MIXDOWN_KEYWORDS + WEAK_MIXDOWN_KEYWORDS
 REFERENCE_KEYWORDS = ["reference", "ref", "target"]
 
@@ -50,34 +58,41 @@ class RoleInferenceResult:
     matched_keyword: str | None = None
 
 
-def _search(text: str, keywords: list[str]) -> str | None:
+def _search(tokens: list[str], keywords: list[str]) -> str | None:
+    """Match keywords against the token list. Multi-word keywords must appear
+    as a contiguous token subsequence; individual tokens tolerate a plural
+    's' (keyword 'vocal' matches the token 'vocals')."""
+
     for kw in keywords:
-        if kw in text:
-            return kw
+        kw_tokens = tokenize(kw)
+        n = len(kw_tokens)
+        for i in range(len(tokens) - n + 1):
+            if all(tokens_equal(tokens[i + j], kw_tokens[j]) for j in range(n)):
+                return kw
     return None
 
 
-def _find_instrument_role(text: str) -> tuple[str, str] | None:
+def _find_instrument_role(tokens: list[str]) -> tuple[str, str] | None:
     for role, keywords in INSTRUMENT_ROLE_KEYWORDS.items():
-        kw = _search(text, keywords)
+        kw = _search(tokens, keywords)
         if kw:
             return role, kw
     return None
 
 
 def looks_like_mixdown(file_name: str) -> bool:
-    text = file_name.lower()
-    if _search(text, REFERENCE_KEYWORDS):
+    tokens = tokenize(file_name)
+    if _search(tokens, REFERENCE_KEYWORDS):
         return False
-    if _search(text, STRONG_MIXDOWN_KEYWORDS):
+    if _search(tokens, STRONG_MIXDOWN_KEYWORDS):
         return True
-    if _search(text, WEAK_MIXDOWN_KEYWORDS) and _find_instrument_role(text) is None:
+    if _search(tokens, WEAK_MIXDOWN_KEYWORDS) and _find_instrument_role(tokens) is None:
         return True
     return False
 
 
 def looks_like_reference(file_name: str) -> bool:
-    return _search(file_name.lower(), REFERENCE_KEYWORDS) is not None
+    return _search(tokenize(file_name), REFERENCE_KEYWORDS) is not None
 
 
 def infer_role(file_name: str) -> RoleInferenceResult:
@@ -86,22 +101,22 @@ def infer_role(file_name: str) -> RoleInferenceResult:
     Returns an ``Unknown`` result with low confidence when nothing matches.
     """
 
-    text = file_name.lower()
+    tokens = tokenize(file_name)
 
     # 1. Reference takes precedence.
-    ref_kw = _search(text, REFERENCE_KEYWORDS)
+    ref_kw = _search(tokens, REFERENCE_KEYWORDS)
     if ref_kw:
         return RoleInferenceResult("Reference", 0.7,
                                    f"Filename contains reference keyword '{ref_kw}'.", ref_kw)
 
     # 2. Strong mixdown keywords.
-    strong = _search(text, STRONG_MIXDOWN_KEYWORDS)
+    strong = _search(tokens, STRONG_MIXDOWN_KEYWORDS)
     if strong:
         return RoleInferenceResult("Mixdown", 0.75,
                                    f"Filename contains mixdown keyword '{strong}'.", strong)
 
     # 3. Instrument / production role.
-    instrument = _find_instrument_role(text)
+    instrument = _find_instrument_role(tokens)
     if instrument:
         role, kw = instrument
         confidence = 0.85 if " " in kw else 0.75
@@ -109,7 +124,7 @@ def infer_role(file_name: str) -> RoleInferenceResult:
                                    f"Filename contains {role.lower()} keyword '{kw}'.", kw)
 
     # 4. Weak mixdown keywords (only reached when no instrument role matched).
-    weak = _search(text, WEAK_MIXDOWN_KEYWORDS)
+    weak = _search(tokens, WEAK_MIXDOWN_KEYWORDS)
     if weak:
         return RoleInferenceResult("Mixdown", 0.55,
                                    f"Filename contains mixdown keyword '{weak}' and no instrument keyword.", weak)

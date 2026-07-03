@@ -59,17 +59,23 @@ def extract_descriptors(
         return descriptor
 
     try:
-        y, sr = librosa.load(path, sr=None, mono=True)
+        # Load in the file's original channel layout: loudness (BS.1770) and
+        # peak must be measured on the real channels, not a mono downmix.
+        y_raw, sr = librosa.load(path, sr=None, mono=False)
     except Exception as exc:
         descriptor.warnings.append(f"Could not load audio ({exc}).")
         return descriptor
 
-    if y is None or len(y) == 0:
+    if y_raw is None or y_raw.size == 0:
         descriptor.warnings.append("Audio file is empty.")
         return descriptor
 
+    # Spectral/temporal features are computed on a mono mix; y_raw keeps the
+    # channel layout for peak and loudness.
+    y = np.mean(y_raw, axis=0) if y_raw.ndim > 1 else y_raw
+
     descriptor.sample_rate = int(sr)
-    descriptor.duration_seconds = _safe_float(len(y) / sr)
+    descriptor.duration_seconds = _safe_float(y_raw.shape[-1] / sr)
 
     try:
         rms = librosa.feature.rms(y=y)[0]
@@ -79,7 +85,7 @@ def extract_descriptors(
         warnings.append(f"RMS failed ({exc}).")
 
     try:
-        peak = float(np.max(np.abs(y)))
+        peak = float(np.max(np.abs(y_raw)))
         descriptor.peak_amplitude = _safe_float(peak)
         # Rough crest-factor style dynamic-range proxy in dB.
         if descriptor.rms_mean and descriptor.rms_mean > 0 and peak > 0:
@@ -120,12 +126,16 @@ def extract_descriptors(
     except Exception as exc:
         warnings.append(f"Onset/tempo failed ({exc}).")
 
-    # Optional true loudness measurement.
+    # Optional true loudness measurement (BS.1770 via pyloudnorm), on the
+    # file's original channel layout — pyloudnorm expects (samples, channels).
     try:
         import pyloudnorm as pyln
 
         meter = pyln.Meter(sr)
-        descriptor.integrated_loudness_lufs = _safe_float(meter.integrated_loudness(y))
+        loudness_input = y_raw.T if y_raw.ndim > 1 else y_raw
+        descriptor.integrated_loudness_lufs = _safe_float(
+            meter.integrated_loudness(loudness_input)
+        )
     except Exception:
         # Silently leave as None: absence of loudness is expected, not an error.
         pass

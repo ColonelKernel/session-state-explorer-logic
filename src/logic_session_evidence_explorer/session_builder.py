@@ -18,6 +18,7 @@ import os
 from typing import Optional
 
 from . import audio_descriptors, recommendations, utils
+from .matching import names_match
 from .models import (
     HiddenStateMarker,
     InferredTrackState,
@@ -58,8 +59,7 @@ def build_inferred_tracks(session: SessionEvidence) -> list[InferredTrackState]:
         note_ids = [
             n.id
             for n in session.channel_strip_notes
-            if n.track_name
-            and n.track_name.lower() in (audio.inferred_track_name or "").lower()
+            if names_match(n.track_name, audio.inferred_track_name or audio.file_name)
         ]
 
         # Fields the user has annotated move from "hidden" to "annotated".

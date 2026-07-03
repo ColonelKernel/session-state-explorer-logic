@@ -18,6 +18,7 @@ try:
 except Exception:  # pragma: no cover - optional at graph-export time
     _HAS_NX = False
 
+from .matching import name_match_confidence, names_match
 from .models import GraphExport, SessionEvidence
 
 OBSERVED = "observed"
@@ -74,8 +75,28 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
         )
         edge(session_id, audio.id, "contains_audio")
 
-    # Descriptors ---------------------------------------------------------- #
+    # Dedicated reference tracks (uploaded separately from the stem pool).
+    # Skip any that duplicate a file already present in the stem pool, so the
+    # same physical file never appears as two nodes.
+    audio_file_names = {a.file_name for a in session.audio_files}
+    for ref in session.reference_tracks:
+        if ref.file_name in audio_file_names:
+            continue
+        _add_node(
+            nodes,
+            ref.id,
+            label=ref.file_name,
+            type="reference_track",
+            observability=OBSERVED,
+            file_name=ref.file_name,
+        )
+        edge(session_id, ref.id, "contains_audio")
+
+    # Descriptors. Only added when their source node exists, so a descriptor
+    # can never appear as an orphan in the graph. ---------------------------- #
     for desc in session.descriptors:
+        if desc.source_id not in nodes:
+            continue
         _add_node(
             nodes,
             desc.id,
@@ -83,8 +104,7 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
             type="descriptor_set",
             observability=DERIVED,
         )
-        if desc.source_id in nodes:
-            edge(desc.source_id, desc.id, "has_descriptor")
+        edge(desc.source_id, desc.id, "has_descriptor")
 
     # Inferred tracks ------------------------------------------------------ #
     for track in session.inferred_tracks:
@@ -119,8 +139,9 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
             edge(midi.id, tid, "contains_audio")
             # Link MIDI track to inferred tracks whose name matches.
             for track in session.inferred_tracks:
-                if name and name.lower() in (track.name or "").lower():
-                    edge(track.id, tid, "linked_to_midi")
+                if names_match(name, track.name):
+                    edge(track.id, tid, "linked_to_midi",
+                         name_match_confidence(name, track.name))
 
     # MusicXML ------------------------------------------------------------- #
     if session.musicxml_evidence:
@@ -138,8 +159,9 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
             _add_node(nodes, pid, label=name, type="musicxml_part", observability=OBSERVED)
             edge(mxl.id, pid, "contains_audio")
             for track in session.inferred_tracks:
-                if name and name.lower() in (track.name or "").lower():
-                    edge(track.id, pid, "linked_to_score_part")
+                if names_match(name, track.name):
+                    edge(track.id, pid, "linked_to_score_part",
+                         name_match_confidence(name, track.name))
 
     # Channel-strip notes (+ plugin/send/bus sub-nodes) -------------------- #
     for note in session.channel_strip_notes:
@@ -154,8 +176,9 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
         # Attach note to matching inferred track, else to session.
         attached = False
         for track in session.inferred_tracks:
-            if note.track_name and note.track_name.lower() in (track.name or "").lower():
-                edge(track.id, note.id, "annotated_by", note.confidence)
+            if names_match(note.track_name, track.name):
+                edge(track.id, note.id, "annotated_by",
+                     name_match_confidence(note.track_name, track.name))
                 attached = True
         if not attached:
             edge(session_id, note.id, "annotated_by", note.confidence)
@@ -175,7 +198,9 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
 
     # Reference comparison edges (mixdown -> reference) -------------------- #
     mixdowns = [a.id for a in session.audio_files if a.is_mixdown]
-    references = [a.id for a in session.audio_files if a.is_reference]
+    references = [a.id for a in session.audio_files if a.is_reference] + [
+        r.id for r in session.reference_tracks
+    ]
     for mix in mixdowns:
         for ref in references:
             edge(mix, ref, "compared_to_reference")
