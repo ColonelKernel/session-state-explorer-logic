@@ -13,6 +13,7 @@ import statistics
 from typing import Callable
 
 from . import utils
+from .matching import names_match
 from .models import Recommendation, SessionEvidence
 
 Rule = Callable[[SessionEvidence], list[Recommendation]]
@@ -70,23 +71,18 @@ def rule_vocal_without_notes(session: SessionEvidence) -> list[Recommendation]:
     vocal_stems = [a for a in session.audio_files if a.inferred_role == "Vocal"]
     if not vocal_stems:
         return []
-    documented = {
-        n.track_name.lower()
-        for n in session.channel_strip_notes
-        if (n.role or "").lower() == "vocal" or "vocal" in (n.track_name or "").lower()
-    }
-    undocumented = [
-        a for a in vocal_stems
-        if (a.inferred_track_name or "").lower() not in documented
-    ]
-    if not documented or undocumented:
+    # A vocal stem counts as documented when ANY channel-strip note names it —
+    # the same criterion the graph uses for annotated_by edges, so the rule
+    # and the graph can never disagree about the same stem.
+    undocumented = [a for a in vocal_stems if not _is_documented(session, a)]
+    if undocumented:
         return [
             Recommendation(
                 id=utils.make_id("rec"),
                 title="Vocal processing state is under-documented.",
                 severity="suggestion",
                 confidence=0.7,
-                related_node_ids=[a.id for a in vocal_stems],
+                related_node_ids=[a.id for a in undocumented],
                 explanation=(
                     "The graph contains a vocal-like stem, but there is no visible "
                     "evidence of EQ, compression, de-essing, ambience sends, or "
@@ -107,8 +103,10 @@ def rule_vocal_without_notes(session: SessionEvidence) -> list[Recommendation]:
 
 def rule_mixdown_without_reference(session: SessionEvidence) -> list[Recommendation]:
     mixdowns = [a for a in session.audio_files if a.is_mixdown]
-    references = [a for a in session.audio_files if a.is_reference]
-    if mixdowns and not references:
+    has_reference = any(a.is_reference for a in session.audio_files) or bool(
+        session.reference_tracks
+    )
+    if mixdowns and not has_reference:
         return [
             Recommendation(
                 id=utils.make_id("rec"),
@@ -172,10 +170,9 @@ def rule_stem_level_imbalance(session: SessionEvidence) -> list[Recommendation]:
 
 
 def _is_documented(session: SessionEvidence, audio) -> bool:
-    name = (audio.inferred_track_name or "").lower()
+    name = audio.inferred_track_name or audio.file_name
     return any(
-        n.track_name and n.track_name.lower() in name
-        for n in session.channel_strip_notes
+        names_match(n.track_name, name) for n in session.channel_strip_notes
     )
 
 
@@ -223,12 +220,13 @@ def rule_midi_score_mismatch(session: SessionEvidence) -> list[Recommendation]:
     part_names = [p for p in part_names if p]
     if not part_names:
         return []
-    stem_names = [
-        (a.inferred_track_name or a.file_name).lower() for a in session.audio_files
-    ]
+    # Match parts against inferred tracks — the same targets the graph draws
+    # linked_to_midi / linked_to_score_part edges to — so an orphan part node
+    # in the graph and this rule always agree.
+    track_names = [t.name for t in session.inferred_tracks]
     unmatched = [
         p for p in part_names
-        if not any(p.lower() in s or s in p.lower() for s in stem_names)
+        if not any(names_match(p, s) for s in track_names)
     ]
     if unmatched:
         return [

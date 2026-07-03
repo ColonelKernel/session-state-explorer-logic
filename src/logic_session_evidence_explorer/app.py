@@ -75,7 +75,11 @@ def build_session_from_uploads(state: dict) -> SessionEvidence:
     utils.reset_ids()
 
     scanned: list[stem_scanner.ScannedFile] = []
+    # A stem upload sharing the dedicated reference's filename is the same
+    # file: mark it as a reference so it is not double-counted as a stem.
     reference_names: set[str] = set()
+    if state.get("reference"):
+        reference_names.add(state["reference"].name)
 
     for up in state.get("stems", []):
         path = _save_upload(up, "stems")
