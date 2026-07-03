@@ -28,6 +28,7 @@ from logic_session_evidence_explorer import (  # noqa: E402
     aaf_adm_inspector,
     demo,
     export,
+    graph_builder,
     manifest_loader,
     midi_inspector,
     musicxml_inspector,
@@ -160,8 +161,43 @@ def build_session_from_uploads(state: dict) -> SessionEvidence:
 # --------------------------------------------------------------------------- #
 # Rendering
 # --------------------------------------------------------------------------- #
+def render_evidence_meter(session: SessionEvidence) -> None:
+    """One stacked bar showing how much of the graph is observed vs inferred
+    vs annotated vs hidden vs derived — the thesis of the tool, in one glance."""
+
+    metadata = graph_builder.build_graph_export(session).metadata
+    pcts = metadata.get("observability_percentages", {})
+    segments = ""
+    labels = []
+    for key in visualization.OBSERVABILITY_ORDER:
+        pct = pcts.get(key, 0)
+        if pct <= 0:
+            continue
+        color = visualization.OBSERVABILITY_COLORS[key]
+        segments += (
+            f'<div style="width:{pct}%;background:{color};" '
+            f'title="{key}: {pct}%"></div>'
+        )
+        labels.append(
+            f'<span style="color:{color};font-weight:600">{pct:g}% {key}</span>'
+        )
+    st.markdown(
+        '<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;'
+        f'border:1px solid #ddd">{segments}</div>'
+        f'<div style="margin-top:4px;font-size:0.85em">{" · ".join(labels)}</div>',
+        unsafe_allow_html=True,
+    )
+
+
 def render_summary(session: SessionEvidence) -> None:
     st.subheader("Session summary")
+    provenance = (
+        "synthetic demo (generated audio)"
+        if session.source_type == "synthetic_demo"
+        else "your uploaded Logic exports"
+    )
+    st.caption(f"Built from: {provenance}")
+    render_evidence_meter(session)
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Audio files", len(session.audio_files))
     c1.metric("Inferred tracks", len(session.inferred_tracks))
@@ -195,6 +231,33 @@ def render_tables(session: SessionEvidence) -> None:
         "confidence": a.confidence,
         "explanation": a.role_explanation,
     } for a in session.audio_files]), use_container_width=True)
+
+    playable = [
+        a for a in session.audio_files if a.file_path and os.path.exists(a.file_path)
+    ]
+    playable_refs = [
+        r for r in session.reference_tracks if r.file_path and os.path.exists(r.file_path)
+    ]
+    if playable or playable_refs:
+        with st.expander("Listen to audio evidence"):
+            st.caption(
+                "Hearing a stem next to its inferred role is the fastest way to "
+                "inspect — and contest — the inference."
+            )
+            options: dict = {}
+            for a in playable:
+                label = f"{a.inferred_track_name or a.file_name} ({a.inferred_role})"
+                # Distinct files can normalise to the same display name;
+                # disambiguate so every file stays auditable.
+                if label in options:
+                    label = f"{label} — {a.file_name}"
+                while label in options:
+                    label += " (duplicate)"
+                options[label] = a.file_path
+            for r in playable_refs:
+                options[f"Reference: {r.file_name}"] = r.file_path
+            choice = st.selectbox("Audio file", list(options))
+            st.audio(options[choice])
 
     st.subheader("Inferred tracks")
     st.dataframe(pd.DataFrame([{
@@ -268,7 +331,7 @@ def render_graph(session: SessionEvidence) -> None:
     st.subheader("Interpretable session graph")
 
     with st.expander("Legend & filters", expanded=True):
-        cols = st.columns(2)
+        cols = st.columns(3)
         with cols[0]:
             show_desc = st.checkbox("Show descriptors", value=True)
             show_hidden = st.checkbox("Show hidden-state markers", value=True)
@@ -277,7 +340,15 @@ def render_graph(session: SessionEvidence) -> None:
         with cols[1]:
             obs_filter = st.selectbox(
                 "Observability focus",
-                ["All", "Observed only", "Inferred only", "Hidden only"],
+                ["All", "Observed only", "Inferred only", "Annotations only",
+                 "Hidden only", "Derived only"],
+            )
+        with cols[2]:
+            layout_choice = st.selectbox(
+                "Layout",
+                ["Force-directed", "Layered by observability"],
+                help="Layered columns run observed → inferred → annotation → "
+                     "hidden → derived, left to right.",
             )
         legend_html = " &nbsp; ".join(
             f'<span style="color:{visualization.OBSERVABILITY_COLORS[obs]};font-weight:600">&#9679; {label}</span>'
@@ -285,10 +356,20 @@ def render_graph(session: SessionEvidence) -> None:
         )
         st.markdown(legend_html, unsafe_allow_html=True)
 
+    highlight_ids = st.session_state.get("highlight_ids") or []
+    if highlight_ids:
+        hl_col, clear_col = st.columns([4, 1])
+        hl_col.caption(
+            f"Highlighting evidence for: {st.session_state.get('highlight_title', '')}"
+        )
+        clear_col.button("Clear highlight", on_click=_clear_highlight)
+
     obs_map = {
-        "All": None, "Observed only": "observed",
-        "Inferred only": "inferred", "Hidden only": "hidden",
+        "All": None, "Observed only": "observed", "Inferred only": "inferred",
+        "Annotations only": "annotation", "Hidden only": "hidden",
+        "Derived only": "derived",
     }
+    layout = "layered" if layout_choice.startswith("Layered") else "force"
     filters = dict(
         show_descriptors=show_desc, show_hidden=show_hidden,
         show_recommendations=show_rec, show_score=show_score,
@@ -296,7 +377,9 @@ def render_graph(session: SessionEvidence) -> None:
     )
 
     try:
-        html = visualization.build_pyvis_html(session, **filters)
+        html = visualization.build_pyvis_html(
+            session, layout=layout, highlight_ids=highlight_ids, **filters
+        )
         import streamlit.components.v1 as components
 
         components.html(html, height=680, scrolling=True)
@@ -305,11 +388,49 @@ def render_graph(session: SessionEvidence) -> None:
         st.info(f"PyVis unavailable ({exc}); falling back to Plotly.")
 
     try:
-        fig = visualization.build_plotly_figure(session, **filters)
+        fig = visualization.build_plotly_figure(
+            session, layout=layout, highlight_ids=highlight_ids, **filters
+        )
         st.plotly_chart(fig, use_container_width=True)
     except Exception as exc:
         st.warning(f"Graph rendering unavailable ({exc}). Showing raw graph JSON.")
         st.json(export.graph_json(session))
+
+
+def _set_highlight(title: str, node_ids: list) -> None:
+    """on_click callback: runs before the script re-executes, so the graph
+    (rendered earlier in the script than the recommendations) sees the new
+    highlight in the same frame the user's click produces."""
+
+    st.session_state["highlight_ids"] = list(node_ids)
+    st.session_state["highlight_title"] = title
+    st.toast("Open the Graph tab to see the highlighted evidence.")
+
+
+def _clear_highlight() -> None:
+    st.session_state["highlight_ids"] = []
+    st.session_state["highlight_title"] = ""
+
+
+def _store_session(session: SessionEvidence) -> None:
+    """Replace the active session; any highlight refers to the old session's
+    node ids (which a rebuild reuses for different nodes), so drop it."""
+
+    _clear_highlight()
+    st.session_state["session"] = session
+
+
+def _node_label_map(session: SessionEvidence) -> dict:
+    labels = {}
+    for a in session.audio_files:
+        labels[a.id] = a.inferred_track_name or a.file_name
+    for t in session.inferred_tracks:
+        labels[t.id] = t.name
+    for r in session.reference_tracks:
+        labels[r.id] = r.file_name
+    for n in session.channel_strip_notes:
+        labels[n.id] = f"Notes: {n.track_name}"
+    return labels
 
 
 def render_recommendations(session: SessionEvidence) -> None:
@@ -317,15 +438,25 @@ def render_recommendations(session: SessionEvidence) -> None:
     if not session.recommendations:
         st.success("No recommendations fired for this session.")
         return
+    labels = _node_label_map(session)
     sev_icon = {"info": "ℹ️", "suggestion": "💡", "warning": "⚠️"}
     for rec in session.recommendations:
         with st.container(border=True):
             st.markdown(f"### {sev_icon.get(rec.severity, '•')} {rec.title}")
-            st.caption(f"Severity: {rec.severity} · Confidence: {rec.confidence:.2f} · "
-                       f"Related nodes: {len(rec.related_node_ids)}")
+            st.caption(f"Severity: {rec.severity} · Confidence: {rec.confidence:.2f}")
             st.write(f"**Explanation:** {rec.explanation}")
             st.write(f"**Suggested action:** {rec.suggested_action}")
             st.write(f"**Caveat:** {rec.caveat}")
+            evidence = [labels.get(nid, nid) for nid in rec.related_node_ids]
+            if evidence:
+                chips = " ".join(f"`{name}`" for name in evidence)
+                st.markdown(f"**Evidence:** {chips}")
+                st.button(
+                    "Highlight in graph",
+                    key=f"highlight_{rec.id}",
+                    on_click=_set_highlight,
+                    args=(rec.title, rec.related_node_ids),
+                )
 
 
 def render_exports(session: SessionEvidence) -> None:
@@ -383,7 +514,7 @@ def main() -> None:
         st.caption("Loads the synthetic 'Logic Indie Mix Evidence Demo'. Audio is generated tones/noise.")
         if st.button("Build demo session", type="primary"):
             with st.spinner("Generating synthetic audio and building the graph..."):
-                st.session_state["session"] = demo.build_demo_session(with_descriptors=with_descriptors)
+                _store_session(demo.build_demo_session(with_descriptors=with_descriptors))
         if st.session_state.get("session"):
             render_session(st.session_state["session"])
 
@@ -422,7 +553,7 @@ def main() -> None:
                 st.warning("Upload at least one stem or a mixdown to build a session.")
             else:
                 with st.spinner("Scanning evidence and building the graph..."):
-                    st.session_state["session"] = build_session_from_uploads(state)
+                    _store_session(build_session_from_uploads(state))
         if st.session_state.get("session"):
             render_session(st.session_state["session"])
 
