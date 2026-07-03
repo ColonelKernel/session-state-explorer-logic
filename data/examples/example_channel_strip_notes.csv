@@ -1,0 +1,7 @@
+track_name,role,plugins,sends,bus,notes
+Lead Vocal,Vocal,"Channel EQ; Compressor; DeEsser; Tape Delay","Vocal Verb; Slap Delay","Vocal Bus","Main lead vocal chain"
+Backing Vocals,Vocal,"Channel EQ; Compressor","Vocal Verb","Vocal Bus","Doubled backing vocals"
+Drums,Drums,"Channel EQ; Compressor; Saturation","Room Verb","Drum Bus","Printed drum stem"
+Bass,Bass,"Bass Amp; Compressor; EQ","","Music Bus","DI plus amp processing"
+Electric Guitar,Guitar,"Amp Designer; Channel EQ","Plate Verb","Music Bus","Rhythm guitar layer"
+Synth Pad,Keys,"Channel EQ; Chorus","Plate Verb","Music Bus","Wide sustained pad"
