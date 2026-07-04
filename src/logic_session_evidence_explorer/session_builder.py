@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 from typing import Optional
 
-from . import audio_descriptors, recommendations, utils
+from . import audio_descriptors, observation_model, recommendations, utils
 from .matching import names_match
 from .models import (
     HiddenStateMarker,
@@ -26,20 +26,14 @@ from .models import (
 )
 
 
-def _hidden_marker(target_id: str, hstype: str, description: str, consequence: str) -> HiddenStateMarker:
+def _hidden_marker(target_id: str, hstype: str, definition: dict) -> HiddenStateMarker:
     return HiddenStateMarker(
         id=utils.make_id("hidden"),
         target_id=target_id,
         hidden_state_type=hstype,
-        description=description,
-        consequence=consequence,
-        possible_sources=[
-            "user channel-strip notes",
-            "screenshots",
-            "manual export documentation",
-            "future DAW integration",
-            "partner-provided session metadata",
-        ],
+        description=definition["description"],
+        consequence=definition["consequence"],
+        possible_sources=list(observation_model.POSSIBLE_SOURCES),
     )
 
 
@@ -62,18 +56,18 @@ def build_inferred_tracks(session: SessionEvidence) -> list[InferredTrackState]:
             if names_match(n.track_name, audio.inferred_track_name or audio.file_name)
         ]
 
-        # Fields the user has annotated move from "hidden" to "annotated".
-        all_hidden = ["plugin_chain", "automation", "sends", "bus_routing", "track_stack"]
-        annotated_fields: list[str] = []
-        if note_ids:
-            notes = [n for n in session.channel_strip_notes if n.id in note_ids]
-            if any(n.plugins for n in notes):
-                annotated_fields.append("plugin_chain")
-            if any(n.sends for n in notes):
-                annotated_fields.append("sends")
-            if any(n.bus for n in notes):
-                annotated_fields.append("bus_routing")
-        hidden_fields = [f for f in all_hidden if f not in annotated_fields]
+        # Fields the user has annotated move from "hidden" to "annotated";
+        # both sets are derived from the declarative observation model.
+        # Collect across notes, then order by the model's field order so the
+        # exported list is stable regardless of note order.
+        asserted: set[str] = set()
+        for note in session.channel_strip_notes:
+            if note.id in note_ids:
+                asserted.update(observation_model.annotated_fields_from_note(note))
+        annotated_fields = [
+            f for f in observation_model.NOTE_FIELD_ASSERTIONS.values() if f in asserted
+        ]
+        hidden_fields = observation_model.hidden_fields_for_track(annotated_fields)
 
         track = InferredTrackState(
             id=utils.make_id("track"),
@@ -92,46 +86,23 @@ def build_inferred_tracks(session: SessionEvidence) -> list[InferredTrackState]:
 
 
 def generate_hidden_state_markers(session: SessionEvidence) -> list[HiddenStateMarker]:
-    """Always emit the three core hidden-state markers, plus per-track chains."""
+    """Derive hidden-state markers from the declarative observation model.
+
+    Session-level definitions always emit one marker; track-level definitions
+    emit one marker per inferred track whose corresponding field has not been
+    lifted by a user annotation. Deriving (rather than hard-coding) makes the
+    marker set checkable for completeness against the model.
+    """
 
     markers: list[HiddenStateMarker] = []
 
-    markers.append(
-        _hidden_marker(
-            "session",
-            "hidden_automation",
-            "Automation curves are not available from exported stems unless "
-            "separately documented.",
-            "Temporal mix decisions such as vocal rides, send throws, or filter "
-            "sweeps may be present in the audio but not represented as editable "
-            "DAW state.",
-        )
-    )
-    markers.append(
-        _hidden_marker(
-            "session",
-            "hidden_routing",
-            "Bus, send, track-stack, and sidechain relationships are not reliably "
-            "recoverable from stem audio alone.",
-            "The graph may represent exported stems as flat tracks even if the "
-            "original Logic session used complex routing.",
-        )
-    )
+    for hstype, definition in observation_model.session_level_definitions():
+        markers.append(_hidden_marker("session", hstype, definition))
 
-    # Per-inferred-track plug-in chain markers (skip when notes were provided).
-    for track in session.inferred_tracks:
-        if track.channel_strip_note_ids:
-            continue
-        markers.append(
-            _hidden_marker(
-                track.id,
-                "hidden_plugin_chain",
-                "Native Logic channel-strip plug-in chain is not directly "
-                "observable from exported audio alone.",
-                "Recommendations based only on stem audio and filename evidence "
-                "cannot distinguish printed processing from raw recording.",
-            )
-        )
+    for hstype, definition in observation_model.track_level_definitions():
+        for track in session.inferred_tracks:
+            if definition["field"] in track.hidden_fields:
+                markers.append(_hidden_marker(track.id, hstype, definition))
     return markers
 
 

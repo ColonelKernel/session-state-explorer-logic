@@ -517,6 +517,12 @@ def render_exports(session: SessionEvidence) -> None:
                        file_name="recommendations.json", mime="application/json")
     c3.download_button("Full bundle JSON", dumps(export.full_bundle(session)),
                        file_name="full_bundle.json", mime="application/json", type="primary")
+    c3.download_button("PROV-O JSON view", dumps(export.prov_json(session)),
+                       file_name="session_prov.json", mime="application/json",
+                       help="PROV-O-grounded JSON view of the session graph: observed "
+                            "evidence as primary sources, notes attributed to the "
+                            "producer, analyses as derivations, hidden state as an "
+                            "honest extension class.")
 
 
 def render_session(session: SessionEvidence) -> None:

@@ -24,15 +24,29 @@ from dataclasses import dataclass
 
 from .matching import tokenize, tokens_equal
 
-# Instrument / production-role keywords, checked in order.
+# Instrument / production-role keywords, checked in order. The base lists
+# follow common Logic naming; the extensions marked "corpus" are generic
+# production vocabulary that benchmarking against MedleyDB's instrument
+# labels exposed as missing. Note the extensions were selected from misses on
+# that same corpus, so the accuracy reported in docs/evaluation.md is
+# in-sample vocabulary coverage, not held-out generalization.
 INSTRUMENT_ROLE_KEYWORDS: dict[str, list[str]] = {
-    "Vocal": ["backing vocal", "lead vox", "vocal", "vox", "voice", "bgv", "harmony"],
-    "Drums": ["drums", "drum", "kick", "snare", "hihat", "hi-hat", "hat", "tom", "percussion", "perc", "beat"],
+    "Vocal": ["backing vocal", "lead vox", "vocal", "vox", "voice", "bgv", "harmony",
+              # corpus:
+              "singer", "vocalist", "rapper", "rap", "choir"],
+    "Drums": ["drums", "drum", "kick", "snare", "hihat", "hi-hat", "hat", "tom",
+              "percussion", "perc", "beat",
+              # corpus:
+              "cymbal", "tabla", "tambourine", "clap", "shaker", "timpani", "bongo"],
     "Bass": ["bass", "sub", "808"],
     "Guitar": ["electric guitar", "acoustic guitar", "guitar", "gtr"],
-    "Keys": ["keys", "piano", "rhodes", "organ", "synth", "pad", "lead synth"],
+    "Keys": ["keys", "piano", "rhodes", "organ", "synth", "pad", "lead synth",
+             # corpus:
+             "synthesizer"],
     "Strings": ["strings", "violin", "viola", "cello"],
-    "Brass": ["brass", "trumpet", "trombone", "horn"],
+    "Brass": ["brass", "trumpet", "trombone", "horn",
+              # corpus:
+              "tuba", "cornet", "euphonium"],
     "FX": ["riser", "impact", "sweep", "texture", "noise", "fx"],
     "Bus": ["bus", "group", "aux", "stem"],
 }

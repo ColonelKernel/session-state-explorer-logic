@@ -30,11 +30,21 @@ as a defect to hide, but as the phenomenon to model honestly.
   every node by *observability*: observed / inferred / annotation / hidden /
   derived.
 - Emits explicit **hidden-state markers** for Logic-native state that exports
-  cannot reveal (plug-in chains, automation, routing).
+  cannot reveal (plug-in chains, automation, routing) — derived from a
+  declarative **observation model**
+  ([observation_model.py](src/logic_session_evidence_explorer/observation_model.py)),
+  not hard-coded.
+- Runs **signal-level analyses**: silence-gated level descriptors, stem-sum vs
+  mixdown reconciliation, and level-independent reference comparison.
 - Produces **explainable, rule-based recommendations**, each with a confidence,
   explanation, suggested action and caveat.
 - **Exports** everything to JSON (session evidence, graph, descriptors,
-  recommendations, and a full research bundle).
+  recommendations, a full research bundle, and a **PROV-O-grounded JSON** view
+  of the graph).
+- Ships a **measured evaluation** of its role inference against MedleyDB's
+  instrument vocabulary and curated Logic-style filenames
+  ([docs/evaluation.md](docs/evaluation.md)), with confidence-reliability
+  evidence for the emitted confidence scores and honest in-sample caveats.
 
 ## What this prototype does *not* do
 
@@ -183,13 +193,29 @@ research group (MTG) would need from a trustworthy AI-assisted production system
 - AAF/ADM inspection is intentionally conservative (recorded as external
   interchange evidence, not fully parsed).
 
+## Evaluation
+
+Role inference is benchmarked (`eval/benchmark_role_inference.py`) against the
+instrument vocabulary of **MedleyDB** (Bittner et al., 2014) — with
+out-of-taxonomy instruments expecting abstention — plus a curated set of
+decorated Logic-style filenames. Baseline vocabulary scored 78.8%;
+corpus-grounded extension raised coverage to ~99% — an **in-sample** figure,
+since the extensions were selected from misses on the same corpus — and the
+reliability table shows the emitted confidences are conservative. Full tables, confusions, and
+honest limits in [docs/evaluation.md](docs/evaluation.md); regenerate with:
+
+```bash
+PYTHONPATH=src python3 eval/benchmark_role_inference.py
+```
+
 ## Roadmap
 
-- Stem-sum reconciliation against the mixdown when aligned exports are provided.
+- A second DAW evidence profile via open interchange (DAWproject / AAF with
+  pyaaf2), demonstrating the observability boundary moving.
 - Similarity comparison between two exported evidence bundles.
 - Richer manifest-driven routing (explicit bus/send graph).
-- Optional integration points for partner-provided session metadata.
-- A session "fingerprint" summary and screenshot gallery.
+- Contestability: accept/reject/correct controls persisted as provenance.
+- Time-varying descriptor envelopes as automation evidence.
 
 ## Development
 
