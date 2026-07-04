@@ -1,8 +1,11 @@
 from logic_session_evidence_explorer import recommendations, session_builder, stem_scanner, utils
 from logic_session_evidence_explorer.models import (
+    AudioDescriptorSet,
     ChannelStripNote,
+    ReferenceComparison,
     ReferenceTrackEvidence,
     SessionEvidence,
+    StemSumReconciliation,
 )
 
 
@@ -108,6 +111,76 @@ def test_midi_mismatch_rule_agrees_with_graph_link_targets():
                                          track_names=["Master", "Kick"])
     session = session_builder.finalize_session(session, with_descriptors=False)
     assert any("not linked to audio evidence" in t for t in _titles(session))
+
+
+def _attach_level_descriptor(session, audio, active_rms):
+    desc = AudioDescriptorSet(
+        id=utils.make_id("descriptor"), source_id=audio.id,
+        file_name=audio.file_name, active_rms_mean=active_rms, rms_mean=active_rms,
+    )
+    audio.descriptor_id = desc.id
+    session.descriptors.append(desc)
+    for t in session.inferred_tracks:
+        if t.source_audio_id == audio.id:
+            t.descriptor_id = desc.id
+
+
+def test_imbalance_rule_fires_on_hot_active_level():
+    session = _session(["01_Drums.wav", "02_Bass.wav", "03_Guitar.wav"])
+    stems = [a for a in session.audio_files]
+    _attach_level_descriptor(session, stems[0], 0.1)
+    _attach_level_descriptor(session, stems[1], 0.1)
+    _attach_level_descriptor(session, stems[2], 0.9)  # ~19 dB above median
+    recs = recommendations.rule_stem_level_imbalance(session)
+    assert len(recs) == 1
+    assert recs[0].related_node_ids == [stems[2].id]
+
+
+def test_imbalance_rule_ignores_sparse_but_equal_stems():
+    # A sparse stem has low whole-file RMS but the same active level; the
+    # silence-gated rule must not flag anything.
+    session = _session(["01_Drums.wav", "02_Bass.wav", "03_Guitar.wav"])
+    stems = list(session.audio_files)
+    for a in stems:
+        desc = AudioDescriptorSet(
+            id=utils.make_id("descriptor"), source_id=a.id, file_name=a.file_name,
+            active_rms_mean=0.2,
+            rms_mean=0.02 if a is stems[0] else 0.2,  # stems[0] plays rarely
+        )
+        a.descriptor_id = desc.id
+        session.descriptors.append(desc)
+    assert recommendations.rule_stem_level_imbalance(session) == []
+
+
+def test_stem_sum_mismatch_rule():
+    session = _session(["01_Drums.wav", "02_Bass.wav", "Stereo_Mix_Bounce.wav"])
+    mixdown = next(a for a in session.audio_files if a.is_mixdown)
+    session.stem_sum_reconciliation = StemSumReconciliation(
+        id="recon_1", mixdown_audio_id=mixdown.id, stem_audio_ids=["a", "b"],
+        residual_db=-8.0, band_residuals_db={"2000-4000Hz": -3.0},
+    )
+    recs = recommendations.rule_stem_sum_mismatch(session)
+    assert len(recs) == 1
+    assert "-8.0" in recs[0].explanation or "residual of -8" in recs[0].explanation
+
+    session.stem_sum_reconciliation.residual_db = -45.0
+    assert recommendations.rule_stem_sum_mismatch(session) == []
+
+
+def test_reference_balance_rule():
+    session = _session(["01_Drums.wav", "Stereo_Mix_Bounce.wav"])
+    mixdown = next(a for a in session.audio_files if a.is_mixdown)
+    session.reference_comparisons.append(ReferenceComparison(
+        id="cmp_1", mixdown_audio_id=mixdown.id, reference_id="ref_1",
+        band_deltas_db={"60-120Hz": -7.5, "1000-2000Hz": 1.0},
+    ))
+    recs = recommendations.rule_reference_balance(session)
+    assert len(recs) == 1
+    assert "60-120Hz" in recs[0].explanation
+    assert "-7.5" in recs[0].explanation
+
+    session.reference_comparisons[0].band_deltas_db = {"60-120Hz": -2.0}
+    assert recommendations.rule_reference_balance(session) == []
 
 
 def test_every_recommendation_is_explainable():

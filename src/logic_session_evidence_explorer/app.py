@@ -269,14 +269,58 @@ def render_tables(session: SessionEvidence) -> None:
         "hidden": ", ".join(t.hidden_fields),
     } for t in session.inferred_tracks]), use_container_width=True)
 
+    recon = session.stem_sum_reconciliation
+    if recon:
+        st.subheader("Stem-sum reconciliation")
+        st.caption(
+            "The exported stems were summed, one global gain was fitted, and "
+            "the residual against the mixdown was measured. Signal evidence "
+            "for how much of the mix the stems explain."
+        )
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Residual", f"{recon.residual_db} dB" if recon.residual_db is not None else "n/a")
+        m2.metric("Correlation", recon.correlation if recon.correlation is not None else "n/a")
+        m3.metric("Fitted gain", recon.fitted_gain if recon.fitted_gain is not None else "n/a")
+        st.write(recon.interpretation)
+        if recon.band_residuals_db:
+            st.bar_chart(pd.DataFrame(
+                {"residual_db": recon.band_residuals_db}
+            ))
+        for w in recon.warnings:
+            st.caption(f"⚠️ {w}")
+
+    for cmp_result in session.reference_comparisons:
+        st.subheader("Reference comparison")
+        st.caption(
+            "Per-band energy fractions (level-independent): positive bars mean "
+            "the mixdown has proportionally more energy in that band than the "
+            "reference. A reference is a comparison, not a target."
+        )
+        if cmp_result.band_deltas_db:
+            st.bar_chart(pd.DataFrame({"delta_db_vs_reference": cmp_result.band_deltas_db}))
+        details = {
+            "LUFS delta": cmp_result.lufs_delta,
+            "Crest delta (dB)": cmp_result.crest_delta_db,
+            "Stereo width delta": cmp_result.stereo_width_delta,
+        }
+        st.write({k: v for k, v in details.items() if v is not None})
+        if cmp_result.summary:
+            st.write(cmp_result.summary)
+        for w in cmp_result.warnings:
+            st.caption(f"⚠️ {w}")
+
     if session.descriptors:
         st.subheader("Audio descriptors")
         st.dataframe(pd.DataFrame([{
             "file_name": d.file_name,
             "duration_s": round(d.duration_seconds, 2) if d.duration_seconds else None,
             "rms_mean": d.rms_mean,
+            "active_rms": d.active_rms_mean,
+            "activity": d.activity_ratio,
             "peak": d.peak_amplitude,
             "dyn_range_dB": d.dynamic_range_approx,
+            "active_crest_dB": d.dynamic_range_active_db,
+            "stereo_width": d.stereo_width_ratio,
             "centroid_hz": round(d.spectral_centroid_mean, 1) if d.spectral_centroid_mean else None,
             "zcr": d.zero_crossing_rate_mean,
             "tempo": d.estimated_tempo,

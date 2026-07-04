@@ -196,6 +196,36 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
             _add_node(nodes, nid, label=note.bus, type="bus_note", observability=ANNOTATION)
             edge(note.id, nid, "mentions_bus")
 
+    # Signal-level analyses (derived) --------------------------------------- #
+    recon = session.stem_sum_reconciliation
+    if recon:
+        label = "Stem-sum reconciliation"
+        if recon.residual_db is not None:
+            label += f" ({recon.residual_db} dB residual)"
+        _add_node(
+            nodes,
+            recon.id,
+            label=label,
+            type="stem_sum_reconciliation",
+            observability=DERIVED,
+            description=recon.interpretation,
+        )
+        edge(recon.mixdown_audio_id, recon.id, "part_of_reconciliation")
+        for stem_id in recon.stem_audio_ids:
+            edge(stem_id, recon.id, "part_of_reconciliation")
+
+    for cmp_result in session.reference_comparisons:
+        _add_node(
+            nodes,
+            cmp_result.id,
+            label="Reference comparison",
+            type="reference_comparison",
+            observability=DERIVED,
+            description=cmp_result.summary,
+        )
+        edge(cmp_result.mixdown_audio_id, cmp_result.id, "part_of_comparison")
+        edge(cmp_result.reference_id, cmp_result.id, "part_of_comparison")
+
     # Reference comparison edges (mixdown -> reference) -------------------- #
     mixdowns = [a.id for a in session.audio_files if a.is_mixdown]
     references = [a.id for a in session.audio_files if a.is_reference] + [
