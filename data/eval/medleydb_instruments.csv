@@ -1,0 +1,95 @@
+name,expected_role,count,category
+accordion,Unknown,15,out_of_taxonomy
+acoustic guitar,Guitar,171,in_taxonomy
+alto saxophone,Unknown,9,out_of_taxonomy
+auxiliary percussion,Drums,59,in_taxonomy
+bamboo flute,Unknown,2,out_of_taxonomy
+banjo,Unknown,4,out_of_taxonomy
+baritone saxophone,Unknown,2,out_of_taxonomy
+bass clarinet,Unknown,4,out_of_taxonomy
+bass drum,Drums,13,in_taxonomy
+bassoon,Unknown,56,out_of_taxonomy
+bongo,Drums,4,in_taxonomy
+brass section,Brass,21,in_taxonomy
+cabasa,Drums,2,in_taxonomy
+castanet,Drums,4,in_taxonomy
+cello,Strings,57,in_taxonomy
+cello section,Strings,20,in_taxonomy
+chimes,Drums,4,in_taxonomy
+claps,Drums,20,in_taxonomy
+clarinet,Unknown,63,out_of_taxonomy
+clarinet section,Unknown,9,out_of_taxonomy
+clean electric guitar,Guitar,384,in_taxonomy
+cornet,Brass,2,in_taxonomy
+cowbell,Drums,2,in_taxonomy
+cymbal,Drums,88,in_taxonomy
+darbuka,Drums,4,in_taxonomy
+dilruba,Unknown,3,out_of_taxonomy
+distorted electric guitar,Guitar,387,in_taxonomy
+dizi,Unknown,10,out_of_taxonomy
+double bass,Bass,124,in_taxonomy
+doumbek,Drums,4,in_taxonomy
+drum machine,Drums,104,in_taxonomy
+drum set,Drums,905,in_taxonomy
+electric bass,Bass,486,in_taxonomy
+electric piano,Keys,40,in_taxonomy
+electronic organ,Keys,35,in_taxonomy
+erhu,Unknown,12,out_of_taxonomy
+euphonium,Brass,2,in_taxonomy
+female singer,Vocal,245,in_taxonomy
+flute,Unknown,54,out_of_taxonomy
+flute section,Unknown,4,out_of_taxonomy
+french horn,Brass,21,in_taxonomy
+french horn section,Brass,6,in_taxonomy
+fx/processed sound,FX,163,in_taxonomy
+glockenspiel,Unknown,9,out_of_taxonomy
+gong,Drums,4,in_taxonomy
+gu,Unknown,2,out_of_taxonomy
+guiro,Drums,1,in_taxonomy
+guzheng,Unknown,10,out_of_taxonomy
+harmonica,Unknown,4,out_of_taxonomy
+harp,Unknown,16,out_of_taxonomy
+high hat,Drums,106,in_taxonomy
+horn section,Brass,42,in_taxonomy
+kick drum,Drums,218,in_taxonomy
+lap steel guitar,Guitar,18,in_taxonomy
+liuqin,Unknown,4,out_of_taxonomy
+male rapper,Vocal,21,in_taxonomy
+male screamer,Vocal,3,in_taxonomy
+male singer,Vocal,364,in_taxonomy
+male speaker,Vocal,8,in_taxonomy
+mandolin,Unknown,18,out_of_taxonomy
+melodica,Unknown,3,out_of_taxonomy
+oboe,Unknown,19,out_of_taxonomy
+oud,Unknown,4,out_of_taxonomy
+piano,Keys,317,in_taxonomy
+piccolo,Unknown,8,out_of_taxonomy
+sampler,Unknown,9,out_of_taxonomy
+scratches,FX,2,in_taxonomy
+shaker,Drums,19,in_taxonomy
+sitar,Unknown,2,out_of_taxonomy
+sleigh bells,Drums,2,in_taxonomy
+snare drum,Drums,245,in_taxonomy
+soprano saxophone,Unknown,7,out_of_taxonomy
+string section,Strings,67,in_taxonomy
+synthesizer,Keys,328,in_taxonomy
+tabla,Drums,52,in_taxonomy
+tack piano,Keys,43,in_taxonomy
+tambourine,Drums,30,in_taxonomy
+tenor saxophone,Unknown,88,out_of_taxonomy
+timpani,Drums,19,in_taxonomy
+toms,Drums,129,in_taxonomy
+trombone,Brass,11,in_taxonomy
+trombone section,Brass,18,in_taxonomy
+trumpet,Brass,30,in_taxonomy
+trumpet section,Brass,22,in_taxonomy
+tuba,Brass,4,in_taxonomy
+vibraphone,Unknown,46,out_of_taxonomy
+viola,Strings,37,in_taxonomy
+viola section,Strings,14,in_taxonomy
+violin,Strings,130,in_taxonomy
+violin section,Strings,85,in_taxonomy
+vocalists,Vocal,122,in_taxonomy
+whistle,Unknown,1,out_of_taxonomy
+yangqin,Unknown,12,out_of_taxonomy
+zhongruan,Unknown,6,out_of_taxonomy
