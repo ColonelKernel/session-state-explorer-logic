@@ -111,7 +111,9 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
         _add_node(
             nodes,
             track.id,
-            label=track.name,
+            # Prefixed so the inferred column does not read as an accidental
+            # duplicate of the audio-evidence column in the layered layout.
+            label=f"Track: {track.name}",
             type="inferred_track",
             observability=INFERRED,
             role=track.role,
@@ -199,9 +201,11 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
     # Signal-level analyses (derived) --------------------------------------- #
     recon = session.stem_sum_reconciliation
     if recon:
+        # Keep the residual figure inside the 24-char display truncation: the
+        # number is the payload.
         label = "Stem-sum reconciliation"
         if recon.residual_db is not None:
-            label += f" ({recon.residual_db} dB residual)"
+            label = f"Stem residual {recon.residual_db} dB"
         _add_node(
             nodes,
             recon.id,
@@ -236,11 +240,14 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
             edge(mix, ref, "compared_to_reference")
 
     # Hidden-state markers ------------------------------------------------- #
+    from .observation_model import HIDDEN_STATE_DEFINITIONS
+
     for marker in session.hidden_state_markers:
+        definition = HIDDEN_STATE_DEFINITIONS.get(marker.hidden_state_type, {})
         _add_node(
             nodes,
             marker.id,
-            label=marker.hidden_state_type,
+            label=definition.get("display_name", marker.hidden_state_type),
             type="hidden_state_marker",
             observability=HIDDEN,
             description=marker.description,

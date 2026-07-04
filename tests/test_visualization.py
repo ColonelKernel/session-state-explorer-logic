@@ -3,6 +3,7 @@ import pytest
 from logic_session_evidence_explorer import session_builder, stem_scanner, utils
 from logic_session_evidence_explorer.models import SessionEvidence
 from logic_session_evidence_explorer.visualization import (
+    MAX_LABEL_CHARS,
     OBSERVABILITY_ORDER,
     layered_positions,
     truncate_label,
@@ -25,8 +26,10 @@ def test_truncate_label_short_names_untouched():
 def test_truncate_label_long_names_ellipsized():
     long = "Add channel-strip notes to improve DAW-state interpretability."
     out = truncate_label(long)
-    assert len(out) <= 24
+    assert len(out) <= MAX_LABEL_CHARS
     assert out.endswith("…")
+    # A "Track: "-prefixed demo track name must fit untruncated.
+    assert truncate_label("Track: Backing Vocals Bounce") == "Track: Backing Vocals Bounce"
 
 
 def test_layered_positions_column_order():
@@ -67,6 +70,35 @@ def test_pyvis_layered_layout_has_fixed_positions_no_physics_freeze():
     html = build_pyvis_html(_session(), layout="layered")
     assert "stabilizationIterationsDone" not in html
     assert '"x":' in html and '"y":' in html
+    # No physics means no stabilisation auto-fit: the explicit fit must be
+    # injected or the default view renders zoomed-in.
+    assert "network.fit()" in html
+
+
+def test_dark_fill_nodes_get_white_labels():
+    pytest.importorskip("pyvis")
+    import json as _json
+    import re
+
+    from logic_session_evidence_explorer.models import AudioDescriptorSet
+    from logic_session_evidence_explorer.visualization import build_pyvis_html
+
+    session = _session()
+    first = session.audio_files[0]
+    desc = AudioDescriptorSet(id="descriptor_test", source_id=first.id,
+                              file_name=first.file_name)
+    first.descriptor_id = desc.id
+    session.descriptors.append(desc)
+
+    html = build_pyvis_html(session)
+    nodes_json = re.search(r"nodes = new vis.DataSet\((\[.*?\])\);", html, re.S)
+    assert nodes_json, "could not locate nodes payload in pyvis HTML"
+    nodes = _json.loads(nodes_json.group(1))
+    by_id = {n["id"]: n for n in nodes}
+    # pyvis silently overwrites per-node fonts when a constructor-level
+    # font_color is set — this asserts the white font actually survives.
+    assert by_id["descriptor_test"]["font"]["color"] == "#ffffff"
+    assert by_id[first.id]["font"]["color"] == "#222222"
 
 
 def test_pyvis_highlight_enlarges_nodes():
