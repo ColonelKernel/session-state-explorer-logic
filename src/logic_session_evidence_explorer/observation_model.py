@@ -82,6 +82,7 @@ HIDDEN_STATE_DEFINITIONS: dict[str, dict] = {
     "hidden_plugin_chain": {
         "target": "track",
         "field": "plugin_chain",
+        "display_name": "Hidden plug-in chain",
         "description": (
             "Native Logic channel-strip plug-in chain is not directly "
             "observable from exported audio alone."
@@ -94,6 +95,7 @@ HIDDEN_STATE_DEFINITIONS: dict[str, dict] = {
     "hidden_automation": {
         "target": "session",
         "field": "automation",
+        "display_name": "Hidden automation",
         "description": (
             "Automation curves are not available from exported stems unless "
             "separately documented."
@@ -107,6 +109,7 @@ HIDDEN_STATE_DEFINITIONS: dict[str, dict] = {
     "hidden_routing": {
         "target": "session",
         "field": "bus_routing",
+        "display_name": "Hidden routing",
         "description": (
             "Bus, send, track-stack, and sidechain relationships are not reliably "
             "recoverable from stem audio alone."

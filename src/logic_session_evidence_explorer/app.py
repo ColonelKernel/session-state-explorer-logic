@@ -178,8 +178,11 @@ def render_evidence_meter(session: SessionEvidence) -> None:
             f'<div style="width:{pct}%;background:{color};" '
             f'title="{key}: {pct}%"></div>'
         )
+        # Colour carries the category on the dot only; the words stay in the
+        # default text colour so they meet WCAG contrast on white.
         labels.append(
-            f'<span style="color:{color};font-weight:600">{pct:g}% {key}</span>'
+            f'<span style="color:{color}">&#9679;</span> '
+            f'<span style="font-weight:600">{pct:g}% {key}</span>'
         )
     st.markdown(
         '<div style="display:flex;height:14px;border-radius:7px;overflow:hidden;'
@@ -390,12 +393,15 @@ def render_graph(session: SessionEvidence) -> None:
         with cols[2]:
             layout_choice = st.selectbox(
                 "Layout",
-                ["Force-directed", "Layered by observability"],
+                ["Layered by observability", "Force-directed"],
                 help="Layered columns run observed → inferred → annotation → "
-                     "hidden → derived, left to right.",
+                     "hidden → derived, left to right — the evidence-to-hidden "
+                     "gradient at a glance.",
             )
+        st.caption("Colour = observability class · shape = node type")
         legend_html = " &nbsp; ".join(
-            f'<span style="color:{visualization.OBSERVABILITY_COLORS[obs]};font-weight:600">&#9679; {label}</span>'
+            f'<span style="color:{visualization.OBSERVABILITY_COLORS[obs]}">&#9679;</span> '
+            f'<span style="font-weight:600">{label}</span>'
             for label, obs in visualization.LEGEND
         )
         st.markdown(legend_html, unsafe_allow_html=True)
@@ -486,7 +492,7 @@ def render_recommendations(session: SessionEvidence) -> None:
     sev_icon = {"info": "ℹ️", "suggestion": "💡", "warning": "⚠️"}
     for rec in session.recommendations:
         with st.container(border=True):
-            st.markdown(f"### {sev_icon.get(rec.severity, '•')} {rec.title}")
+            st.markdown(f"#### {sev_icon.get(rec.severity, '•')} {rec.title}")
             st.caption(f"Severity: {rec.severity} · Confidence: {rec.confidence:.2f}")
             st.write(f"**Explanation:** {rec.explanation}")
             st.write(f"**Suggested action:** {rec.suggested_action}")
@@ -560,11 +566,26 @@ def main() -> None:
     )
 
     if mode == "Built-in demo":
-        st.header("Mode 1 — Built-in demo")
-        st.caption("Loads the synthetic 'Logic Indie Mix Evidence Demo'. Audio is generated tones/noise.")
+        # Once a demo session exists, the summary is the star: demote the
+        # mode block so it stops pushing content down the page. Only demote
+        # for a session this mode actually built.
+        showing_demo = (
+            st.session_state.get("session") is not None
+            and st.session_state["session"].source_type == "synthetic_demo"
+        )
+        if showing_demo:
+            st.caption("Built-in demo — synthetic 'Logic Indie Mix Evidence Demo' "
+                       "(generated tones/noise). Rebuild any time:")
+        else:
+            st.header("Built-in demo")
+            st.caption("Loads the synthetic 'Logic Indie Mix Evidence Demo'. "
+                       "Audio is generated tones/noise.")
         if st.button("Build demo session", type="primary"):
             with st.spinner("Generating synthetic audio and building the graph..."):
                 _store_session(demo.build_demo_session(with_descriptors=with_descriptors))
+            # Rerun so the frame the user sees reflects the stored session
+            # (demoted header, summary at top) instead of lagging one frame.
+            st.rerun()
         if st.session_state.get("session"):
             render_session(st.session_state["session"])
 
@@ -604,6 +625,7 @@ def main() -> None:
             else:
                 with st.spinner("Scanning evidence and building the graph..."):
                     _store_session(build_session_from_uploads(state))
+                st.rerun()
         if st.session_state.get("session"):
             render_session(st.session_state["session"])
 
@@ -619,7 +641,8 @@ def main() -> None:
         st.markdown("**Node observability legend**")
         st.markdown(
             " &nbsp; ".join(
-                f'<span style="color:{c};font-weight:600">&#9679; {k}</span>'
+                f'<span style="color:{c}">&#9679;</span> '
+                f'<span style="font-weight:600">{k}</span>'
                 for k, c in visualization.OBSERVABILITY_COLORS.items() if k != "unknown"
             ),
             unsafe_allow_html=True,

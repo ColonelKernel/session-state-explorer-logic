@@ -66,7 +66,8 @@ LEGEND = [
     ("Recommendation (hexagon)", "derived"),
 ]
 
-MAX_LABEL_CHARS = 24
+# Sized so a "Track: "-prefixed demo track name still fits untruncated.
+MAX_LABEL_CHARS = 28
 
 # Injected after the vis.Network is constructed: freeze physics once the
 # force layout has stabilised, so the graph does not jiggle on camera.
@@ -74,6 +75,9 @@ _FREEZE_PHYSICS_JS = (
     "network.once('stabilizationIterationsDone', function () {"
     " network.setOptions({physics: false}); });"
 )
+# With physics off (layered layout) there is no stabilisation event to
+# trigger vis-network's auto-fit, so fit explicitly once drawn.
+_FIT_VIEW_JS = "network.once('afterDrawing', function () { network.fit(); });"
 _NETWORK_CTOR = "network = new vis.Network(container, data, options);"
 
 
@@ -172,7 +176,9 @@ def build_pyvis_html(session: SessionEvidence, *, height: str = "650px",
     nodes, edges = filter_graph(export, **filters)
     highlight = set(highlight_ids or [])
 
-    net = Network(height=height, width="100%", directed=True, bgcolor="#ffffff", font_color="#222")
+    # No constructor-level font_color: pyvis would silently overwrite every
+    # per-node font dict with it (Node.__init__ applies font_color last).
+    net = Network(height=height, width="100%", directed=True, bgcolor="#ffffff")
     positions = {}
     if layout == "layered":
         positions = layered_positions(nodes)
@@ -180,11 +186,16 @@ def build_pyvis_html(session: SessionEvidence, *, height: str = "650px",
     else:
         net.barnes_hut(gravity=-8000, spring_length=120)
 
+    # Shapes that draw the label INSIDE the node need a light font on our
+    # dark (purple) fills to stay readable; below-node labels keep dark text.
+    inside_label_dark_fills = {"descriptor_set", "stem_sum_reconciliation", "reference_comparison"}
+
     for n in nodes:
         kwargs: dict = {
             "label": truncate_label(n["label"]),
             "shape": TYPE_SHAPES.get(n["type"], "dot"),
             "title": _node_tooltip(n),
+            "font": {"color": "#ffffff" if n["type"] in inside_label_dark_fills else "#222222"},
         }
         if n["id"] in highlight:
             kwargs["color"] = {"background": _color(n), "border": "#111111"}
@@ -203,8 +214,9 @@ def build_pyvis_html(session: SessionEvidence, *, height: str = "650px",
     except TypeError:  # older pyvis
         html = net.generate_html()
 
-    if layout == "force" and _NETWORK_CTOR in html:
-        html = html.replace(_NETWORK_CTOR, _NETWORK_CTOR + "\n" + _FREEZE_PHYSICS_JS)
+    if _NETWORK_CTOR in html:
+        inject = _FREEZE_PHYSICS_JS if layout == "force" else _FIT_VIEW_JS
+        html = html.replace(_NETWORK_CTOR, _NETWORK_CTOR + "\n" + inject)
     return html
 
 
