@@ -54,7 +54,14 @@ SCHEMA_VERSION = "0.1.0"
 
 
 class AudioDescriptorSet(BaseModel):
-    """Numeric descriptors extracted from a single audio file."""
+    """Numeric descriptors extracted from a single audio file.
+
+    Level descriptors come in two flavours: whole-file (``rms_mean``) and
+    silence-gated (``active_rms_mean``). Logic exports each track at full song
+    length, so a stem that plays only in one chorus is mostly digital silence
+    — whole-file RMS then measures arrangement density, not level. The
+    ``active_*`` fields measure only the frames where the stem is playing.
+    """
 
     id: str
     source_id: str
@@ -66,6 +73,11 @@ class AudioDescriptorSet(BaseModel):
     rms_std: Optional[float] = None
     peak_amplitude: Optional[float] = None
     dynamic_range_approx: Optional[float] = None
+    activity_ratio: Optional[float] = None
+    active_rms_mean: Optional[float] = None
+    active_duration_seconds: Optional[float] = None
+    dynamic_range_active_db: Optional[float] = None
+    stereo_width_ratio: Optional[float] = None
     spectral_centroid_mean: Optional[float] = None
     spectral_bandwidth_mean: Optional[float] = None
     spectral_rolloff_mean: Optional[float] = None
@@ -178,6 +190,45 @@ class HiddenStateMarker(BaseModel):
     possible_sources: list[str] = Field(default_factory=list)
 
 
+class StemSumReconciliation(BaseModel):
+    """Result of summing aligned stems and comparing against the mixdown.
+
+    A low residual means the exported stems largely explain the mixdown; a
+    high residual is signal evidence that bus/master processing (or missing
+    stems, or misalignment) separates the two. This converts the always-on
+    hidden-state markers into evidence-weighted claims.
+    """
+
+    id: str
+    mixdown_audio_id: str
+    stem_audio_ids: list[str] = Field(default_factory=list)
+    fitted_gain: Optional[float] = None
+    residual_db: Optional[float] = None
+    correlation: Optional[float] = None
+    band_residuals_db: dict[str, float] = Field(default_factory=dict)
+    interpretation: str = ""
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ReferenceComparison(BaseModel):
+    """Descriptive comparison between the mixdown and a reference track.
+
+    Band deltas are level-independent (each file's per-band energy fraction),
+    so no normalisation assumption is imposed. The comparison is descriptive
+    — a reference is a point of comparison, never an objective target.
+    """
+
+    id: str
+    mixdown_audio_id: str
+    reference_id: str
+    lufs_delta: Optional[float] = None
+    crest_delta_db: Optional[float] = None
+    stereo_width_delta: Optional[float] = None
+    band_deltas_db: dict[str, float] = Field(default_factory=dict)
+    summary: str = ""
+    warnings: list[str] = Field(default_factory=list)
+
+
 class Recommendation(BaseModel):
     id: str
     title: str
@@ -209,6 +260,8 @@ class SessionEvidence(BaseModel):
     inferred_tracks: list[InferredTrackState] = Field(default_factory=list)
     hidden_state_markers: list[HiddenStateMarker] = Field(default_factory=list)
     descriptors: list[AudioDescriptorSet] = Field(default_factory=list)
+    stem_sum_reconciliation: Optional[StemSumReconciliation] = None
+    reference_comparisons: list[ReferenceComparison] = Field(default_factory=list)
     recommendations: list[Recommendation] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -236,6 +289,8 @@ __all__ = [
     "ReferenceTrackEvidence",
     "InferredTrackState",
     "HiddenStateMarker",
+    "StemSumReconciliation",
+    "ReferenceComparison",
     "Recommendation",
     "GraphExport",
     "SessionEvidence",

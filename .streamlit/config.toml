@@ -1,0 +1,4 @@
+[theme]
+# "Observed" blue from the observability palette — keeps the primary action
+# color inside the app's color language (red is reserved for hidden state).
+primaryColor = "#2E86DE"

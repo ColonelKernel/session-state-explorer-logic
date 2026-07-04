@@ -1,0 +1,193 @@
+{
+  "total_instances": 6467,
+  "accuracy": 0.993,
+  "per_role": {
+    "Bass": {
+      "precision": 0.994,
+      "recall": 1.0,
+      "f1": 0.997,
+      "support": 615
+    },
+    "Brass": {
+      "precision": 1.0,
+      "recall": 0.995,
+      "f1": 0.997,
+      "support": 182
+    },
+    "Bus": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 2
+    },
+    "Drums": {
+      "precision": 1.0,
+      "recall": 0.986,
+      "f1": 0.993,
+      "support": 2049
+    },
+    "FX": {
+      "precision": 1.0,
+      "recall": 0.988,
+      "f1": 0.994,
+      "support": 169
+    },
+    "Guitar": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 965
+    },
+    "Keys": {
+      "precision": 0.999,
+      "recall": 1.0,
+      "f1": 0.999,
+      "support": 769
+    },
+    "Mixdown": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 8
+    },
+    "Reference": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 4
+    },
+    "Strings": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1": 1.0,
+      "support": 413
+    },
+    "Unknown": {
+      "precision": 0.925,
+      "recall": 0.992,
+      "f1": 0.957,
+      "support": 519
+    },
+    "Vocal": {
+      "precision": 1.0,
+      "recall": 0.986,
+      "f1": 0.993,
+      "support": 772
+    }
+  },
+  "by_category": {
+    "curated": {
+      "n": 64,
+      "accuracy": 0.953
+    },
+    "in_taxonomy": {
+      "n": 5888,
+      "accuracy": 0.993
+    },
+    "out_of_taxonomy": {
+      "n": 515,
+      "accuracy": 0.992
+    }
+  },
+  "confidence_reliability": [
+    {
+      "confidence": 0.2,
+      "n": 557,
+      "observed_accuracy": 0.925
+    },
+    {
+      "confidence": 0.55,
+      "n": 2,
+      "observed_accuracy": 1.0
+    },
+    {
+      "confidence": 0.7,
+      "n": 4,
+      "observed_accuracy": 1.0
+    },
+    {
+      "confidence": 0.75,
+      "n": 4958,
+      "observed_accuracy": 0.999
+    },
+    {
+      "confidence": 0.85,
+      "n": 946,
+      "observed_accuracy": 1.0
+    }
+  ],
+  "top_confusions": [
+    {
+      "expected": "Vocal",
+      "predicted": "Unknown",
+      "example": "male speaker",
+      "count": 8
+    },
+    {
+      "expected": "Unknown",
+      "predicted": "Bass",
+      "example": "bass clarinet",
+      "count": 4
+    },
+    {
+      "expected": "Drums",
+      "predicted": "Unknown",
+      "example": "castanet",
+      "count": 4
+    },
+    {
+      "expected": "Drums",
+      "predicted": "Unknown",
+      "example": "chimes",
+      "count": 4
+    },
+    {
+      "expected": "Drums",
+      "predicted": "Unknown",
+      "example": "darbuka",
+      "count": 4
+    },
+    {
+      "expected": "Drums",
+      "predicted": "Unknown",
+      "example": "doumbek",
+      "count": 4
+    },
+    {
+      "expected": "Drums",
+      "predicted": "Unknown",
+      "example": "gong",
+      "count": 4
+    },
+    {
+      "expected": "Vocal",
+      "predicted": "Unknown",
+      "example": "male screamer",
+      "count": 3
+    },
+    {
+      "expected": "Drums",
+      "predicted": "Unknown",
+      "example": "cabasa",
+      "count": 2
+    },
+    {
+      "expected": "Drums",
+      "predicted": "Unknown",
+      "example": "cowbell",
+      "count": 2
+    },
+    {
+      "expected": "FX",
+      "predicted": "Unknown",
+      "example": "scratches",
+      "count": 2
+    },
+    {
+      "expected": "Drums",
+      "predicted": "Unknown",
+      "example": "sleigh bells",
+      "count": 2
+    }
+  ]
+}
