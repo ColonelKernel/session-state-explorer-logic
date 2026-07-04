@@ -46,6 +46,8 @@ TYPE_SHAPES = {
     "send_note": "box",
     "bus_note": "box",
     "descriptor_set": "ellipse",
+    "stem_sum_reconciliation": "database",
+    "reference_comparison": "database",
     "hidden_state_marker": "triangleDown",
     "recommendation": "hexagon",
 }

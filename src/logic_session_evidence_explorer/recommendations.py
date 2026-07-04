@@ -9,6 +9,7 @@ interpretability opportunities, never "the correct mix".
 
 from __future__ import annotations
 
+import math
 import statistics
 from typing import Callable
 
@@ -131,18 +132,25 @@ def rule_mixdown_without_reference(session: SessionEvidence) -> list[Recommendat
 
 
 def rule_stem_level_imbalance(session: SessionEvidence) -> list[Recommendation]:
+    """Compare silence-gated (active) stem levels in dB.
+
+    Whole-file RMS on Logic's full-song-length exports measures how *often* a
+    part plays, not how loud it is; gating on active frames measures level.
+    """
+
     stems = [a for a in session.audio_files if not a.is_mixdown and not a.is_reference]
     values = []
     for a in stems:
         d = _descriptor_for(session, a.id)
-        if d and d.rms_mean is not None:
-            values.append((a, d.rms_mean))
+        level = (d.active_rms_mean if d and d.active_rms_mean else None) or (
+            d.rms_mean if d else None
+        )
+        if level and level > 0:
+            values.append((a, 20.0 * math.log10(level)))
     if len(values) < 3:
         return []
-    median = statistics.median(v for _a, v in values)
-    if median <= 0:
-        return []
-    outliers = [a for a, v in values if v > median * 3.0]
+    median_db = statistics.median(v for _a, v in values)
+    outliers = [a for a, v in values if v > median_db + 6.0]
     if outliers:
         return [
             Recommendation(
@@ -152,9 +160,10 @@ def rule_stem_level_imbalance(session: SessionEvidence) -> list[Recommendation]:
                 confidence=0.55,
                 related_node_ids=[a.id for a in outliers],
                 explanation=(
-                    "One or more exported stems have substantially higher RMS level "
-                    "than the session median. This may be intentional, printed "
-                    "processing, or an export-level mismatch."
+                    "One or more exported stems sit more than 6 dB above the "
+                    "session median, measured on silence-gated (active) RMS so "
+                    "sparse parts are compared fairly. This may be intentional, "
+                    "printed processing, or an export-level mismatch."
                 ),
                 suggested_action=(
                     "Check whether stems were exported pre-fader, post-fader, "
@@ -182,7 +191,14 @@ def rule_printed_processing_ambiguity(session: SessionEvidence) -> list[Recommen
         if a.is_mixdown or a.is_reference or _is_documented(session, a):
             continue
         d = _descriptor_for(session, a.id)
-        if d and d.dynamic_range_approx is not None and d.dynamic_range_approx < 6.0:
+        if d is None:
+            continue
+        # Prefer the silence-gated crest figure; whole-file crest is inflated
+        # by silent stretches on sparse stems.
+        crest = d.dynamic_range_active_db
+        if crest is None:
+            crest = d.dynamic_range_approx
+        if crest is not None and crest < 6.0:
             suspects.append(a)
     if suspects:
         return [
@@ -281,6 +297,83 @@ def rule_hidden_routing(session: SessionEvidence) -> list[Recommendation]:
     return []
 
 
+def rule_stem_sum_mismatch(session: SessionEvidence) -> list[Recommendation]:
+    recon = session.stem_sum_reconciliation
+    if not recon or recon.residual_db is None or recon.residual_db <= -20.0:
+        return []
+    worst_bands = sorted(
+        recon.band_residuals_db.items(), key=lambda kv: kv[1], reverse=True
+    )[:3]
+    band_text = (
+        "; the residual is largest in " + ", ".join(k for k, _v in worst_bands)
+        if worst_bands else ""
+    )
+    return [
+        Recommendation(
+            id=utils.make_id("rec"),
+            title="Mixdown contains processing not present in the stem sum.",
+            severity="info",
+            confidence=0.6,
+            related_node_ids=[recon.mixdown_audio_id, recon.id] + list(recon.stem_audio_ids),
+            explanation=(
+                f"Summing the exported stems and fitting a single gain leaves a "
+                f"residual of {recon.residual_db} dB relative to the mixdown"
+                f"{band_text}. This is signal evidence that bus or master "
+                "processing, automation, or additional content separates the "
+                "stem exports from the final mix."
+            ),
+            suggested_action=(
+                "Document any bus/master processing, or re-export full-length, "
+                "bar-1-aligned stems if the mismatch is unexpected."
+            ),
+            caveat=(
+                "A high residual can also come from missing stems or "
+                "misaligned exports; it identifies a gap, not its cause."
+            ),
+        )
+    ]
+
+
+def rule_reference_balance(session: SessionEvidence) -> list[Recommendation]:
+    recommendations = []
+    for cmp_result in session.reference_comparisons:
+        notable = {
+            k: v for k, v in cmp_result.band_deltas_db.items() if abs(v) >= 6.0
+        }
+        if not notable:
+            continue
+        top = sorted(notable.items(), key=lambda kv: abs(kv[1]), reverse=True)[:3]
+        described = ", ".join(
+            f"{band}: {delta:+.1f} dB relative to the reference" for band, delta in top
+        )
+        recommendations.append(
+            Recommendation(
+                id=utils.make_id("rec"),
+                title="Mixdown and reference differ noticeably in spectral balance.",
+                severity="info",
+                confidence=0.55,
+                related_node_ids=[
+                    cmp_result.mixdown_audio_id, cmp_result.reference_id, cmp_result.id,
+                ],
+                explanation=(
+                    "Comparing per-band energy fractions (level-independent), the "
+                    f"largest differences are {described}."
+                ),
+                suggested_action=(
+                    "Listen to the named bands against the reference and note "
+                    "whether the difference is intentional character or worth "
+                    "revisiting."
+                ),
+                caveat=(
+                    "A reference is a point of comparison, not an objective "
+                    "target; genre and arrangement legitimately move spectral "
+                    "balance."
+                ),
+            )
+        )
+    return recommendations
+
+
 RULES: list[Rule] = [
     rule_missing_channel_strip_notes,
     rule_vocal_without_notes,
@@ -289,6 +382,8 @@ RULES: list[Rule] = [
     rule_printed_processing_ambiguity,
     rule_midi_score_mismatch,
     rule_hidden_routing,
+    rule_stem_sum_mismatch,
+    rule_reference_balance,
 ]
 
 

@@ -168,12 +168,65 @@ def attach_descriptors(session: SessionEvidence, *, estimate_tempo: bool = True)
         session.descriptors.append(desc)
 
 
+def _descriptor_by_id(session: SessionEvidence, descriptor_id):
+    for d in session.descriptors:
+        if d.id == descriptor_id:
+            return d
+    return None
+
+
+def attach_signal_comparisons(session: SessionEvidence) -> None:
+    """Run stem-sum reconciliation and reference comparison when the needed
+    audio files are on disk. Failures degrade to warnings on the result."""
+
+    from . import signal_comparisons
+
+    def _on_disk(obj):
+        return obj.file_path and os.path.exists(obj.file_path)
+
+    mixdown = next((a for a in session.audio_files if a.is_mixdown and _on_disk(a)), None)
+    if not mixdown:
+        return
+
+    stems = {
+        a.id: a.file_path
+        for a in session.audio_files
+        if not a.is_mixdown and not a.is_reference and _on_disk(a)
+    }
+    if len(stems) >= 2:
+        session.stem_sum_reconciliation = signal_comparisons.reconcile_stem_sum(
+            stems, mixdown.file_path, mixdown_audio_id=mixdown.id
+        )
+
+    references = [a for a in session.audio_files if a.is_reference and _on_disk(a)]
+    # A dedicated reference that duplicates a file already in the stem pool
+    # (same file uploaded to both uploaders) must be compared only once —
+    # mirroring the graph's node dedup.
+    audio_file_names = {a.file_name for a in session.audio_files}
+    references += [
+        r for r in session.reference_tracks
+        if _on_disk(r) and r.file_name not in audio_file_names
+    ]
+    for ref in references:
+        session.reference_comparisons.append(
+            signal_comparisons.compare_to_reference(
+                mixdown.file_path,
+                ref.file_path,
+                mixdown_audio_id=mixdown.id,
+                reference_id=ref.id,
+                mixdown_descriptor=_descriptor_by_id(session, mixdown.descriptor_id),
+                reference_descriptor=_descriptor_by_id(session, ref.descriptor_id),
+            )
+        )
+
+
 def finalize_session(session: SessionEvidence, *, with_descriptors: bool = True) -> SessionEvidence:
     """Run the full assembly pipeline on a session that already has audio_files
     (and optionally MIDI / MusicXML / notes) populated."""
 
     if with_descriptors:
         attach_descriptors(session)
+        attach_signal_comparisons(session)
     session.inferred_tracks = build_inferred_tracks(session)
     # Re-point inferred track descriptor ids now that descriptors exist.
     for track in session.inferred_tracks:
