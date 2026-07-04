@@ -51,6 +51,9 @@ def extract_descriptors(
 
     try:
         import librosa
+        # librosa 0.10+ lazy-loads submodules; librosa.feature.rhythm must be
+        # imported explicitly or the tempo call below raises AttributeError.
+        import librosa.feature.rhythm
         import numpy as np
     except Exception as exc:  # pragma: no cover - optional dependency
         descriptor.warnings.append(
