@@ -2,11 +2,9 @@ import math
 import struct
 import wave
 
-import numpy as np
 import pytest
 
 librosa = pytest.importorskip("librosa")
-sf = pytest.importorskip("soundfile")
 
 from logic_session_evidence_explorer import audio_descriptors, utils  # noqa: E402
 
@@ -24,16 +22,6 @@ def _write_stereo_wav(path, *, seconds=1.0, sr=22050, left_gain=0.5, right_gain=
             right = right_gain * math.sin(2 * math.pi * 440 * t)
             frames += struct.pack("<hh", int(left * 32767), int(right * 32767))
         wf.writeframes(bytes(frames))
-
-
-def _write_click_track(path, *, sr=44100, duration=3.0, bpm=120.0):
-    """Write a WAV of short clicks at a fixed tempo."""
-    y = np.zeros(int(sr * duration), dtype=np.float32)
-    click = np.hanning(256).astype(np.float32)
-    step = int(sr * 60.0 / bpm)
-    for start in range(0, len(y) - len(click), step):
-        y[start : start + len(click)] += click
-    sf.write(path, y, sr)
 
 
 def test_stereo_file_duration_uses_samples_not_channels(tmp_path):
@@ -132,6 +120,18 @@ def test_mono_file_still_works(tmp_path):
     assert desc.duration_seconds == pytest.approx(1.0, abs=0.01)
     assert desc.rms_mean is not None
     assert desc.peak_amplitude is not None
+
+
+def _write_click_track(path, *, sr=44100, duration=3.0, bpm=120.0):
+    """Write a WAV of short clicks at a fixed tempo."""
+    np = pytest.importorskip("numpy")
+    sf = pytest.importorskip("soundfile")
+    y = np.zeros(int(sr * duration), dtype=np.float32)
+    click = np.hanning(256).astype(np.float32)
+    step = int(sr * 60.0 / bpm)
+    for start in range(0, len(y) - len(click), step):
+        y[start : start + len(click)] += click
+    sf.write(path, y, sr)
 
 
 def test_tempo_estimated_without_onset_warning(tmp_path):
