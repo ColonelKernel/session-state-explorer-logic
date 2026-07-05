@@ -79,12 +79,18 @@ def reconcile_stem_sum(
 ) -> StemSumReconciliation:
     """Sum the stems, fit one global gain to the mixdown, report the residual.
 
-    ``stem_paths`` maps audio-evidence ids to file paths. Assumes Logic's
-    full-song-length, bar-1-aligned exports (documented in
-    ``docs/logic_export_instructions.md``); duration mismatches are warned
+    ``stem_paths`` maps audio-evidence ids to file paths. Assumes stems were
+    exported full-length and project-start aligned — which in Logic is a
+    *choice*, not a default (Range and Include Audio Tail options; see
+    ``docs/logic_export_instructions.md``). Duration mismatches are warned
     about and truncated to the shortest signal.
     """
 
+    # Alignment is an export-settings assumption, not a Logic default: the
+    # track-export dialog's Range option can trim silence at file end or
+    # export only the cycle range, and Include Audio Tail extends files
+    # (Logic Pro User Guide pp. 183-186). The warning below names the
+    # settings that make stems reconcilable.
     result = StemSumReconciliation(
         id=utils.make_id("reconciliation"),
         mixdown_audio_id=mixdown_audio_id,
@@ -109,8 +115,10 @@ def reconcile_stem_sum(
             if abs(len(y) - mix_len) / max(mix_len, 1) > 0.01:
                 result.warnings.append(
                     f"Stem {audio_id} duration differs from the mixdown by more "
-                    "than 1%; signals were truncated to the shorter length. "
-                    "Export full-length, bar-1-aligned stems for a reliable result."
+                    "than 1%; signals were truncated to the shorter length. For "
+                    "a reliable result, export with Range set to extend to the "
+                    "project end (not 'Trim Silence at File End' or a cycle "
+                    "range) and identical Include Audio Tail settings."
                 )
             min_len = min(min_len, len(y))
             loaded.append(y)

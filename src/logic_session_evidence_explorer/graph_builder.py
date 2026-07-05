@@ -18,6 +18,7 @@ try:
 except Exception:  # pragma: no cover - optional at graph-export time
     _HAS_NX = False
 
+from . import logic_catalog
 from .matching import name_match_confidence, names_match
 from .models import GraphExport, SessionEvidence
 
@@ -187,7 +188,18 @@ def build_graph_export(session: SessionEvidence) -> GraphExport:
 
         for j, plugin in enumerate(note.plugins):
             nid = f"{note.id}_plugin_{j}"
-            _add_node(nodes, nid, label=plugin, type="plugin_note", observability=ANNOTATION)
+            # Recognise documented Logic stock plug-ins: adds category
+            # vocabulary to the user's assertion without changing its status
+            # as an annotation. Unrecognised names (third-party) stay untagged.
+            info = logic_catalog.lookup_plugin(plugin)
+            extra = {}
+            if info:
+                extra = {
+                    "plugin_category": info.category,
+                    "plugin_generation": info.generation,
+                }
+            _add_node(nodes, nid, label=plugin, type="plugin_note",
+                      observability=ANNOTATION, **extra)
             edge(note.id, nid, "mentions_plugin")
         for j, send in enumerate(note.sends):
             nid = f"{note.id}_send_{j}"

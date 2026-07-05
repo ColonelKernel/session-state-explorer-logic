@@ -100,8 +100,16 @@ def looks_like_mixdown(file_name: str) -> bool:
         return False
     if _search(tokens, STRONG_MIXDOWN_KEYWORDS):
         return True
-    if _search(tokens, WEAK_MIXDOWN_KEYWORDS) and _find_instrument_role(tokens) is None:
-        return True
+    if _search(tokens, WEAK_MIXDOWN_KEYWORDS):
+        # Weak keywords ("bounce", "mix", "stereo", "final") only mark a
+        # mixdown when NO instrument evidence is present — neither a role
+        # keyword nor a Logic stock instrument name ("Ultrabeat_Bounce.wav"
+        # is a drum stem, not a mixdown). Must stay consistent with
+        # infer_role's step order.
+        from .logic_catalog import instrument_role_in_tokens
+
+        if _find_instrument_role(tokens) is None and instrument_role_in_tokens(tokens) is None:
+            return True
     return False
 
 
@@ -136,6 +144,21 @@ def infer_role(file_name: str) -> RoleInferenceResult:
         confidence = 0.85 if " " in kw else 0.75
         return RoleInferenceResult(role, confidence,
                                    f"Filename contains {role.lower()} keyword '{kw}'.", kw)
+
+    # 3b. Logic stock instrument names. Logic names new tracks after the
+    # chosen patch/instrument (User Guide p. 129), so exported stems routinely
+    # carry names like "Alchemy" or "Ultrabeat".
+    from .logic_catalog import instrument_role_in_tokens
+
+    stock = instrument_role_in_tokens(tokens)
+    if stock:
+        name, role = stock
+        return RoleInferenceResult(
+            role, 0.8,
+            f"Filename contains the Logic stock instrument name '{name}' "
+            "(Logic names tracks after the chosen patch/instrument).",
+            name.lower(),
+        )
 
     # 4. Weak mixdown keywords (only reached when no instrument role matched).
     weak = _search(tokens, WEAK_MIXDOWN_KEYWORDS)

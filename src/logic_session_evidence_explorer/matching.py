@@ -51,10 +51,11 @@ def tokenize(name: str | None) -> list[str]:
 def identity_tokens(name: str | None) -> set[str]:
     """Tokens that identify the named thing, with export vocabulary removed.
 
-    Digit tokens are kept: they distinguish Logic's default numbered
-    duplicates ("Guitar 1" vs "Guitar 2"). Falls back to the raw token set
-    when the name consists only of generic tokens (e.g. a file literally
-    named "Bounce.wav")."""
+    Digit tokens are kept: Logic numbers multi-renamed tracks and channel
+    strips sequentially ("vox 1", "vox 2" — Logic Pro User Guide pp. 130,
+    616), so a trailing digit is identity, not noise. Falls back to
+    the raw token set when the name consists only of generic tokens (e.g. a
+    file literally named "Bounce.wav")."""
 
     tokens = tokenize(name)
     identity = {t for t in tokens if t not in GENERIC_TOKENS}

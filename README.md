@@ -23,7 +23,11 @@ as a defect to hide, but as the phenomenon to model honestly.
   mixdown, MIDI, MusicXML**, plus optional **channel-strip notes**, a **session
   manifest**, and a **reference track**.
 - Infers **track roles** from filenames, with confidence scores and
-  explanations.
+  explanations — grounded in Logic's documented behaviour and vocabulary: a
+  catalogue of stock instrument and plug-in names from Apple's official Logic
+  Pro guides ([logic_catalog.py](src/logic_session_evidence_explorer/logic_catalog.py))
+  recognises patch-named tracks ("Alchemy", "Ultrabeat") and tags documented
+  stock plug-ins in channel-strip notes.
 - Extracts **audio descriptors** (RMS, spectral centroid/bandwidth/rolloff,
   zero-crossing rate, onset strength, approximate tempo, optional LUFS).
 - Builds an **interpretable, typed session graph** (NetworkX) that colour-codes
