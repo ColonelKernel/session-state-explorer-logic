@@ -40,8 +40,24 @@ def test_ambiguous_instruments_abstain():
 
 
 def test_keywords_take_precedence_over_instrument_names():
-    # An explicit role keyword outranks a patch name in the same filename.
-    assert role_inference.infer_role("Alchemy Bass.wav").role == "Bass"
+    # An explicit role keyword OUTSIDE the instrument name disambiguates.
+    result = role_inference.infer_role("Alchemy Bass.wav")
+    assert result.role == "Bass"
+    assert result.confidence == 0.75
+    assert "keyword" in result.explanation
+
+
+def test_stock_instrument_name_credited_over_contained_keyword():
+    # A documented stock instrument name whose own tokens contain a role
+    # keyword (e.g. "Studio Horns" contains "horn") must be credited to the
+    # catalog — 0.80 with a named explanation — not shadowed at 0.75 by the
+    # bare keyword.
+    for name, role in [("Studio Horns", "Brass"), ("Studio Strings", "Strings"),
+                       ("Studio Bass", "Bass"), ("Studio Piano", "Keys")]:
+        result = role_inference.infer_role(f"{name}.wav")
+        assert result.role == role, name
+        assert result.confidence == 0.8, name
+        assert f"stock instrument name '{name}'" in result.explanation, name
 
 
 def test_longer_abstaining_name_shadows_contained_instrument():
