@@ -86,6 +86,18 @@ and track stacks) are deliberately conservative — they remain even when
 individual tracks carry assertions, because per-track notes do not establish
 session-wide routing.
 
+The hidden-state definitions are grounded in Logic's *documented* constructs
+rather than folklore: the serial insert chain of up to 15 Audio FX slots,
+sends with their three placements (Pre Fader / Post Fader / Post Pan), bus-fed
+aux channel strips, folder vs summing track stacks, VCA groups, mixer groups,
+track vs region automation with Read/Touch/Latch/Write modes, and project
+alternatives — each taken, with page references, from Apple's Logic Pro User
+Guide. Likewise, the role-inference vocabulary includes Logic's documented
+stock instrument names (tracks take the name of the chosen patch), and
+channel-strip notes are enriched against the documented stock plug-in
+catalogue from the Logic Pro Effects guide
+([`logic_catalog.py`](../src/logic_session_evidence_explorer/logic_catalog.py)).
+
 This model is not prose: it is the declarative table in
 [`observation_model.py`](../src/logic_session_evidence_explorer/observation_model.py),
 from which the marker catalogue, the per-track hidden-field list, and the
@@ -219,6 +231,10 @@ inventing its framing from scratch:
 
 ### References
 
+- Apple Inc. *Logic Pro User Guide for Mac*; *Logic Pro Effects for Mac*;
+  *Logic Pro Instruments for Mac*. Official documentation; grounds the
+  hidden-state definitions, export-workflow instructions, stock plug-in
+  catalogue, and stock instrument vocabulary used here.
 - Bittner, R., Salamon, J., Tierney, M., Mauch, M., Cannam, C. & Bello, J. P.
   (2014). *MedleyDB: A Multitrack Dataset for Annotation-Intensive MIR
   Research.* Proc. ISMIR.

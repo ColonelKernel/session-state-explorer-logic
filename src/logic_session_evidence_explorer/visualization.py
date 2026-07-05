@@ -154,6 +154,11 @@ def _node_tooltip(n: dict) -> str:
         bits.append(f"role: {n['role']}")
     if n.get("confidence") is not None:
         bits.append(f"confidence: {n['confidence']}")
+    if n.get("plugin_category"):
+        bits.append(
+            f"documented Logic stock plug-in ({n['plugin_category']}, "
+            f"{n.get('plugin_generation', 'current')})"
+        )
     if n.get("description"):
         bits.append(n["description"])
     return "\n".join(bits)

@@ -78,18 +78,27 @@ NOTE_FIELD_ASSERTIONS = {
 # The hidden-state marker catalogue, derived from the fields no export
 # reveals. ``target`` is "track" (one marker per undocumented track) or
 # "session" (one marker for the whole session).
+# Descriptions and consequences use Logic's documented constructs and
+# terminology (Logic Pro User Guide: channel strips pp. 541-548, sends
+# pp. 584-590, insert chain limit and serial order p. 583, track stacks
+# pp. 161-167, VCA pp. 603-604, automation pp. 621-633, project
+# alternatives pp. 105-109, mixer groups pp. 598-603).
 HIDDEN_STATE_DEFINITIONS: dict[str, dict] = {
     "hidden_plugin_chain": {
         "target": "track",
         "field": "plugin_chain",
         "display_name": "Hidden plug-in chain",
         "description": (
-            "Native Logic channel-strip plug-in chain is not directly "
-            "observable from exported audio alone."
+            "Native Logic channel-strip state — the serial insert-effect chain "
+            "(up to 15 Audio FX slots, processed top-down in insertion order) "
+            "and its parameter values — is not directly observable from "
+            "exported audio alone."
         ),
         "consequence": (
-            "Recommendations based only on stem audio and filename evidence "
-            "cannot distinguish printed processing from raw recording."
+            "An exported stem carries only the summed acoustic result of the "
+            "insert chain: recommendations based on stem audio and filename "
+            "evidence cannot distinguish printed processing from raw recording, "
+            "nor recover plug-in identity, order, or settings."
         ),
     },
     "hidden_automation": {
@@ -97,12 +106,15 @@ HIDDEN_STATE_DEFINITIONS: dict[str, dict] = {
         "field": "automation",
         "display_name": "Hidden automation",
         "description": (
-            "Automation curves are not available from exported stems unless "
-            "separately documented."
+            "Automation state — Logic's track automation and region automation "
+            "curves, their parameter targets, and per-track mode "
+            "(Read/Touch/Latch/Write) — is not available from exported stems "
+            "unless separately documented."
         ),
         "consequence": (
             "Temporal mix decisions such as vocal rides, send throws, or filter "
-            "sweeps may be present in the audio but not represented as editable "
+            "sweeps may be audible as a printed gain or timbre envelope, but the "
+            "point-by-point curves and their targets are no longer editable "
             "DAW state."
         ),
     },
@@ -111,12 +123,19 @@ HIDDEN_STATE_DEFINITIONS: dict[str, dict] = {
         "field": "bus_routing",
         "display_name": "Hidden routing",
         "description": (
-            "Bus, send, track-stack, and sidechain relationships are not reliably "
-            "recoverable from stem audio alone."
+            "Routing state — sends (Pre Fader / Post Fader / Post Pan) to "
+            "bus-fed aux channel strips, summing and folder track stacks, VCA "
+            "group assignments, mixer groups, and sidechain sources — is not "
+            "reliably recoverable from stem audio alone."
         ),
         "consequence": (
             "The graph may represent exported stems as flat tracks even if the "
-            "original Logic session used complex routing."
+            "original Logic session used subgroup buses, track stacks, or VCA "
+            "faders. The structures themselves are unrecoverable: a mixer group "
+            "links controls without touching signal flow, while a VCA fader or "
+            "a folder stack's stack master (which functions as a VCA master "
+            "fader) imprints gain into each stem indistinguishably from "
+            "individual fader moves."
         ),
     },
 }

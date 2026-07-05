@@ -32,7 +32,7 @@ DEMO_STEMS = [
 
 DEMO_NOTES_CSV = (
     "track_name,role,plugins,sends,bus,notes\n"
-    'Lead Vocal,Vocal,"Channel EQ; Compressor; DeEsser; Tape Delay",'
+    'Lead Vocal,Vocal,"Channel EQ; Compressor; DeEsser 2; Tape Delay",'
     '"Vocal Verb; Slap Delay","Vocal Bus","Main lead vocal chain (synthetic demo)"\n'
     'Drums,Drums,"Channel EQ; Compressor; Saturation","Room Verb","Drum Bus",'
     '"Printed drum stem (synthetic demo)"\n'
