@@ -14,16 +14,29 @@ from logic_session_evidence_explorer import demo, export
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 BASELINE = os.path.join(REPO, "fixtures", "baseline")
 
-# Fields that legitimately vary by machine/run (temp directories) and are
-# blanked before comparison.
-_VARYING_KEYS = {"file_path", "audio_dir"}
+# Fields that legitimately vary by environment: temp-dir paths, and the audio
+# header values (duration/sample_rate) + warnings that depend on whether
+# ``soundfile`` is installed (absent in the minimal-deps CI job). Blanked
+# before the structural comparison; the graph test below stays strict.
+_BLANK_KEYS = {"file_path", "audio_dir", "duration_seconds", "sample_rate"}
+# ``observed_fields`` lists duration/sample_rate when the header was readable,
+# so it too depends on whether soundfile is installed.
+_EMPTY_LIST_KEYS = {"warnings", "observed_fields"}
 
 
-def _blank_paths(obj):
+def _normalize(obj):
     if isinstance(obj, dict):
-        return {k: ("" if k in _VARYING_KEYS else _blank_paths(v)) for k, v in obj.items()}
+        out = {}
+        for k, v in obj.items():
+            if k in _BLANK_KEYS:
+                out[k] = None
+            elif k in _EMPTY_LIST_KEYS:
+                out[k] = []
+            else:
+                out[k] = _normalize(v)
+        return out
     if isinstance(obj, list):
-        return [_blank_paths(v) for v in obj]
+        return [_normalize(v) for v in obj]
     return obj
 
 
@@ -41,9 +54,9 @@ def test_baseline_graph_matches_golden():
     assert fresh == _load("demo_graph.json")
 
 
-def test_baseline_bundle_matches_golden_modulo_paths():
+def test_baseline_bundle_matches_golden_structural():
     fresh = json.loads(json.dumps(export.full_bundle(_fresh_session()), default=str))
-    assert _blank_paths(fresh) == _blank_paths(_load("demo_full_bundle.json"))
+    assert _normalize(fresh) == _normalize(_load("demo_full_bundle.json"))
 
 
 def test_baseline_invariants():
