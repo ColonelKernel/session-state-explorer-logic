@@ -72,26 +72,39 @@ class RoleInferenceResult:
     matched_keyword: str | None = None
 
 
-def _search(tokens: list[str], keywords: list[str]) -> str | None:
-    """Match keywords against the token list. Multi-word keywords must appear
-    as a contiguous token subsequence; individual tokens tolerate a plural
-    's' (keyword 'vocal' matches the token 'vocals')."""
+def _search_pos(tokens: list[str], keywords: list[str]) -> tuple[str, int, int] | None:
+    """Match keywords against the token list, returning ``(kw, start, length)``.
+
+    Multi-word keywords must appear as a contiguous token subsequence;
+    individual tokens tolerate a plural 's' (keyword 'vocal' matches the token
+    'vocals')."""
 
     for kw in keywords:
         kw_tokens = tokenize(kw)
         n = len(kw_tokens)
         for i in range(len(tokens) - n + 1):
             if all(tokens_equal(tokens[i + j], kw_tokens[j]) for j in range(n)):
-                return kw
+                return kw, i, n
+    return None
+
+
+def _search(tokens: list[str], keywords: list[str]) -> str | None:
+    hit = _search_pos(tokens, keywords)
+    return hit[0] if hit else None
+
+
+def _find_instrument_role_pos(tokens: list[str]) -> tuple[str, str, int, int] | None:
+    for role, keywords in INSTRUMENT_ROLE_KEYWORDS.items():
+        hit = _search_pos(tokens, keywords)
+        if hit:
+            kw, start, length = hit
+            return role, kw, start, length
     return None
 
 
 def _find_instrument_role(tokens: list[str]) -> tuple[str, str] | None:
-    for role, keywords in INSTRUMENT_ROLE_KEYWORDS.items():
-        kw = _search(tokens, keywords)
-        if kw:
-            return role, kw
-    return None
+    hit = _find_instrument_role_pos(tokens)
+    return (hit[0], hit[1]) if hit else None
 
 
 def looks_like_mixdown(file_name: str) -> bool:
@@ -137,30 +150,41 @@ def infer_role(file_name: str) -> RoleInferenceResult:
         return RoleInferenceResult("Mixdown", 0.75,
                                    f"Filename contains mixdown keyword '{strong}'.", strong)
 
-    # 3. Instrument / production role.
-    instrument = _find_instrument_role(tokens)
-    if instrument:
-        role, kw = instrument
+    # 3. Instrument evidence — a role keyword or a documented Logic stock
+    #    instrument name (Logic names tracks after the chosen patch/instrument,
+    #    User Guide p. 129). A stock instrument name is more specific evidence
+    #    (0.80, credited by name) and wins UNLESS a role keyword sits OUTSIDE
+    #    the instrument's own tokens: there the producer added that keyword to
+    #    disambiguate ("Alchemy Bass" -> Bass), so the keyword wins.
+    from .logic_catalog import instrument_match
+
+    keyword = _find_instrument_role_pos(tokens)
+    stock = instrument_match(tokens)
+
+    def _keyword_result() -> RoleInferenceResult:
+        role, kw = keyword[0], keyword[1]
         confidence = 0.85 if " " in kw else 0.75
         return RoleInferenceResult(role, confidence,
                                    f"Filename contains {role.lower()} keyword '{kw}'.", kw)
 
-    # 3b. Logic stock instrument names. Logic names new tracks after the
-    # chosen patch/instrument (User Guide p. 129), so exported stems routinely
-    # carry names like "Alchemy" or "Ultrabeat".
-    from .logic_catalog import instrument_role_in_tokens
-
-    stock = instrument_role_in_tokens(tokens)
-    if stock:
-        name, role = stock
+    if stock is not None and stock[1] is not None:
+        name, srole, sstart, slen = stock
+        stock_span = set(range(sstart, sstart + slen))
+        if keyword is not None:
+            kw_span = set(range(keyword[2], keyword[2] + keyword[3]))
+            if not kw_span.issubset(stock_span):
+                return _keyword_result()  # keyword outside the instrument name
         return RoleInferenceResult(
-            role, 0.8,
+            srole, 0.8,
             f"Filename contains the Logic stock instrument name '{name}' "
             "(Logic names tracks after the chosen patch/instrument).",
             name.lower(),
         )
 
-    # 4. Weak mixdown keywords (only reached when no instrument role matched).
+    if keyword is not None:
+        return _keyword_result()
+
+    # 4. Weak mixdown keywords (only reached when no instrument evidence).
     weak = _search(tokens, WEAK_MIXDOWN_KEYWORDS)
     if weak:
         return RoleInferenceResult("Mixdown", 0.55,

@@ -221,20 +221,21 @@ def lookup_plugin(name: str) -> Optional[PluginInfo]:
     return _PLUGIN_INDEX.get(tuple(tokenize(name)))
 
 
-def instrument_role_in_tokens(tokens: list[str]) -> Optional[tuple[str, str]]:
-    """Find a documented stock instrument name as a contiguous token
-    subsequence and return ``(instrument_name, role)``.
+def instrument_match(
+    tokens: list[str],
+) -> Optional[tuple[str, Optional[str], int, int]]:
+    """Find the longest documented stock instrument name as a contiguous token
+    subsequence and return ``(name, role_or_None, start_index, length)``.
 
-    Grounds role inference in Logic's documented behaviour of naming tracks
-    after the chosen patch/instrument. Instruments mapped to ``None`` (e.g.
-    Sampler) never produce a role — the correct behaviour there is abstention.
+    Matches ALL entries — including abstaining (``None``-role) ones — and keeps
+    the longest, so "Sample Alchemy" (abstain) shadows the shorter "Alchemy"
+    (Keys) it contains. Returns ``None`` when no instrument name matches at
+    all. The ``start_index``/``length`` locate the matched name in ``tokens``,
+    letting callers tell a keyword *inside* the instrument name ("Studio Horns"
+    contains "horn") from one *outside* it ("Alchemy Bass").
     """
 
-    # Match ALL entries — including abstaining (None-mapped) ones — and keep
-    # the longest: "Sample Alchemy" (abstain) must shadow the shorter
-    # "Alchemy" (Keys) it contains, or the abstention policy is bypassed.
-    best_name: Optional[str] = None
-    best_role: Optional[str] = None
+    best: Optional[tuple[str, Optional[str], int, int]] = None
     best_len = 0
     for key, (name, role) in _INSTRUMENT_INDEX.items():
         n = len(key)
@@ -242,8 +243,21 @@ def instrument_role_in_tokens(tokens: list[str]) -> Optional[tuple[str, str]]:
             continue
         for i in range(len(tokens) - n + 1):
             if tuple(tokens[i:i + n]) == key:
-                best_name, best_role, best_len = name, role, n
+                best = (name, role, i, n)
+                best_len = n
                 break
-    if best_name is not None and best_role is not None:
-        return (best_name, best_role)
+    return best
+
+
+def instrument_role_in_tokens(tokens: list[str]) -> Optional[tuple[str, str]]:
+    """Find a documented stock instrument name and return ``(name, role)``.
+
+    Grounds role inference in Logic's documented behaviour of naming tracks
+    after the chosen patch/instrument. Instruments mapped to ``None`` (e.g.
+    Sampler) never produce a role — the correct behaviour there is abstention.
+    """
+
+    match = instrument_match(tokens)
+    if match is not None and match[1] is not None:
+        return (match[0], match[1])
     return None
