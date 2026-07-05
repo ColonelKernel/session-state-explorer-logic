@@ -1,0 +1,488 @@
+{
+  "nodes": [
+    {
+      "id": "session",
+      "label": "Logic Indie Mix Evidence Demo",
+      "type": "session",
+      "observability": "observed"
+    },
+    {
+      "id": "audio_1",
+      "label": "Drums Bounce",
+      "type": "audio_evidence",
+      "observability": "observed",
+      "role": "Drums",
+      "confidence": 0.75,
+      "file_name": "01_Drums_Bounce.wav"
+    },
+    {
+      "id": "audio_2",
+      "label": "Bass Bounce",
+      "type": "audio_evidence",
+      "observability": "observed",
+      "role": "Bass",
+      "confidence": 0.75,
+      "file_name": "02_Bass_Bounce.wav"
+    },
+    {
+      "id": "audio_3",
+      "label": "Electric Guitar Bounce",
+      "type": "audio_evidence",
+      "observability": "observed",
+      "role": "Guitar",
+      "confidence": 0.85,
+      "file_name": "03_Electric_Guitar_Bounce.wav"
+    },
+    {
+      "id": "audio_4",
+      "label": "Synth Pad Bounce",
+      "type": "audio_evidence",
+      "observability": "observed",
+      "role": "Keys",
+      "confidence": 0.75,
+      "file_name": "04_Synth_Pad_Bounce.wav"
+    },
+    {
+      "id": "audio_5",
+      "label": "Lead Vocal Bounce",
+      "type": "audio_evidence",
+      "observability": "observed",
+      "role": "Vocal",
+      "confidence": 0.75,
+      "file_name": "05_Lead_Vocal_Bounce.wav"
+    },
+    {
+      "id": "audio_6",
+      "label": "Backing Vocals Bounce",
+      "type": "audio_evidence",
+      "observability": "observed",
+      "role": "Vocal",
+      "confidence": 0.85,
+      "file_name": "06_Backing_Vocals_Bounce.wav"
+    },
+    {
+      "id": "audio_7",
+      "label": "Stereo Mix Bounce",
+      "type": "mixdown",
+      "observability": "observed",
+      "role": "Mixdown",
+      "confidence": 0.75,
+      "file_name": "Stereo_Mix_Bounce.wav"
+    },
+    {
+      "id": "track_1",
+      "label": "Track: Drums Bounce",
+      "type": "inferred_track",
+      "observability": "inferred",
+      "role": "Drums",
+      "confidence": 0.75
+    },
+    {
+      "id": "track_2",
+      "label": "Track: Bass Bounce",
+      "type": "inferred_track",
+      "observability": "inferred",
+      "role": "Bass",
+      "confidence": 0.75
+    },
+    {
+      "id": "track_3",
+      "label": "Track: Electric Guitar Bounce",
+      "type": "inferred_track",
+      "observability": "inferred",
+      "role": "Guitar",
+      "confidence": 0.85
+    },
+    {
+      "id": "track_4",
+      "label": "Track: Synth Pad Bounce",
+      "type": "inferred_track",
+      "observability": "inferred",
+      "role": "Keys",
+      "confidence": 0.75
+    },
+    {
+      "id": "track_5",
+      "label": "Track: Lead Vocal Bounce",
+      "type": "inferred_track",
+      "observability": "inferred",
+      "role": "Vocal",
+      "confidence": 0.75
+    },
+    {
+      "id": "track_6",
+      "label": "Track: Backing Vocals Bounce",
+      "type": "inferred_track",
+      "observability": "inferred",
+      "role": "Vocal",
+      "confidence": 0.85
+    },
+    {
+      "id": "note_1",
+      "label": "Notes: Lead Vocal",
+      "type": "channel_strip_note",
+      "observability": "annotation",
+      "confidence": 0.5
+    },
+    {
+      "id": "note_1_plugin_0",
+      "label": "Channel EQ",
+      "type": "plugin_note",
+      "observability": "annotation",
+      "plugin_category": "eq",
+      "plugin_generation": "current"
+    },
+    {
+      "id": "note_1_plugin_1",
+      "label": "Compressor",
+      "type": "plugin_note",
+      "observability": "annotation",
+      "plugin_category": "dynamics",
+      "plugin_generation": "current"
+    },
+    {
+      "id": "note_1_plugin_2",
+      "label": "DeEsser 2",
+      "type": "plugin_note",
+      "observability": "annotation",
+      "plugin_category": "dynamics",
+      "plugin_generation": "current"
+    },
+    {
+      "id": "note_1_plugin_3",
+      "label": "Tape Delay",
+      "type": "plugin_note",
+      "observability": "annotation",
+      "plugin_category": "delay",
+      "plugin_generation": "current"
+    },
+    {
+      "id": "note_1_send_0",
+      "label": "Vocal Verb",
+      "type": "send_note",
+      "observability": "annotation"
+    },
+    {
+      "id": "note_1_send_1",
+      "label": "Slap Delay",
+      "type": "send_note",
+      "observability": "annotation"
+    },
+    {
+      "id": "note_1_bus",
+      "label": "Vocal Bus",
+      "type": "bus_note",
+      "observability": "annotation"
+    },
+    {
+      "id": "note_2",
+      "label": "Notes: Drums",
+      "type": "channel_strip_note",
+      "observability": "annotation",
+      "confidence": 0.5
+    },
+    {
+      "id": "note_2_plugin_0",
+      "label": "Channel EQ",
+      "type": "plugin_note",
+      "observability": "annotation",
+      "plugin_category": "eq",
+      "plugin_generation": "current"
+    },
+    {
+      "id": "note_2_plugin_1",
+      "label": "Compressor",
+      "type": "plugin_note",
+      "observability": "annotation",
+      "plugin_category": "dynamics",
+      "plugin_generation": "current"
+    },
+    {
+      "id": "note_2_plugin_2",
+      "label": "Saturation",
+      "type": "plugin_note",
+      "observability": "annotation"
+    },
+    {
+      "id": "note_2_send_0",
+      "label": "Room Verb",
+      "type": "send_note",
+      "observability": "annotation"
+    },
+    {
+      "id": "note_2_bus",
+      "label": "Drum Bus",
+      "type": "bus_note",
+      "observability": "annotation"
+    },
+    {
+      "id": "hidden_1",
+      "label": "Hidden automation",
+      "type": "hidden_state_marker",
+      "observability": "hidden",
+      "description": "Automation state — Logic's track automation and region automation curves, their parameter targets, and per-track mode (Read/Touch/Latch/Write) — is not available from exported stems unless separately documented."
+    },
+    {
+      "id": "hidden_2",
+      "label": "Hidden routing",
+      "type": "hidden_state_marker",
+      "observability": "hidden",
+      "description": "Routing state — sends (Pre Fader / Post Fader / Post Pan) to bus-fed aux channel strips, summing and folder track stacks, VCA group assignments, mixer groups, and sidechain sources — is not reliably recoverable from stem audio alone."
+    },
+    {
+      "id": "hidden_3",
+      "label": "Hidden plug-in chain",
+      "type": "hidden_state_marker",
+      "observability": "hidden",
+      "description": "Native Logic channel-strip state — the serial insert-effect chain (up to 15 Audio FX slots, processed top-down in insertion order) and its parameter values — is not directly observable from exported audio alone."
+    },
+    {
+      "id": "hidden_4",
+      "label": "Hidden plug-in chain",
+      "type": "hidden_state_marker",
+      "observability": "hidden",
+      "description": "Native Logic channel-strip state — the serial insert-effect chain (up to 15 Audio FX slots, processed top-down in insertion order) and its parameter values — is not directly observable from exported audio alone."
+    },
+    {
+      "id": "hidden_5",
+      "label": "Hidden plug-in chain",
+      "type": "hidden_state_marker",
+      "observability": "hidden",
+      "description": "Native Logic channel-strip state — the serial insert-effect chain (up to 15 Audio FX slots, processed top-down in insertion order) and its parameter values — is not directly observable from exported audio alone."
+    },
+    {
+      "id": "hidden_6",
+      "label": "Hidden plug-in chain",
+      "type": "hidden_state_marker",
+      "observability": "hidden",
+      "description": "Native Logic channel-strip state — the serial insert-effect chain (up to 15 Audio FX slots, processed top-down in insertion order) and its parameter values — is not directly observable from exported audio alone."
+    },
+    {
+      "id": "rec_1",
+      "label": "Vocal processing state is under-documented.",
+      "type": "recommendation",
+      "observability": "derived",
+      "severity": "suggestion",
+      "confidence": 0.7
+    },
+    {
+      "id": "rec_2",
+      "label": "Reference-aware evaluation could be added.",
+      "type": "recommendation",
+      "observability": "derived",
+      "severity": "info",
+      "confidence": 0.6
+    }
+  ],
+  "edges": [
+    {
+      "source": "session",
+      "target": "audio_1",
+      "type": "contains_audio"
+    },
+    {
+      "source": "session",
+      "target": "audio_2",
+      "type": "contains_audio"
+    },
+    {
+      "source": "session",
+      "target": "audio_3",
+      "type": "contains_audio"
+    },
+    {
+      "source": "session",
+      "target": "audio_4",
+      "type": "contains_audio"
+    },
+    {
+      "source": "session",
+      "target": "audio_5",
+      "type": "contains_audio"
+    },
+    {
+      "source": "session",
+      "target": "audio_6",
+      "type": "contains_audio"
+    },
+    {
+      "source": "session",
+      "target": "audio_7",
+      "type": "contains_audio"
+    },
+    {
+      "source": "audio_1",
+      "target": "track_1",
+      "type": "infers_track",
+      "confidence": 0.75
+    },
+    {
+      "source": "audio_2",
+      "target": "track_2",
+      "type": "infers_track",
+      "confidence": 0.75
+    },
+    {
+      "source": "audio_3",
+      "target": "track_3",
+      "type": "infers_track",
+      "confidence": 0.85
+    },
+    {
+      "source": "audio_4",
+      "target": "track_4",
+      "type": "infers_track",
+      "confidence": 0.75
+    },
+    {
+      "source": "audio_5",
+      "target": "track_5",
+      "type": "infers_track",
+      "confidence": 0.75
+    },
+    {
+      "source": "audio_6",
+      "target": "track_6",
+      "type": "infers_track",
+      "confidence": 0.85
+    },
+    {
+      "source": "track_5",
+      "target": "note_1",
+      "type": "annotated_by",
+      "confidence": 1.0
+    },
+    {
+      "source": "note_1",
+      "target": "note_1_plugin_0",
+      "type": "mentions_plugin"
+    },
+    {
+      "source": "note_1",
+      "target": "note_1_plugin_1",
+      "type": "mentions_plugin"
+    },
+    {
+      "source": "note_1",
+      "target": "note_1_plugin_2",
+      "type": "mentions_plugin"
+    },
+    {
+      "source": "note_1",
+      "target": "note_1_plugin_3",
+      "type": "mentions_plugin"
+    },
+    {
+      "source": "note_1",
+      "target": "note_1_send_0",
+      "type": "mentions_send"
+    },
+    {
+      "source": "note_1",
+      "target": "note_1_send_1",
+      "type": "mentions_send"
+    },
+    {
+      "source": "note_1",
+      "target": "note_1_bus",
+      "type": "mentions_bus"
+    },
+    {
+      "source": "track_1",
+      "target": "note_2",
+      "type": "annotated_by",
+      "confidence": 1.0
+    },
+    {
+      "source": "note_2",
+      "target": "note_2_plugin_0",
+      "type": "mentions_plugin"
+    },
+    {
+      "source": "note_2",
+      "target": "note_2_plugin_1",
+      "type": "mentions_plugin"
+    },
+    {
+      "source": "note_2",
+      "target": "note_2_plugin_2",
+      "type": "mentions_plugin"
+    },
+    {
+      "source": "note_2",
+      "target": "note_2_send_0",
+      "type": "mentions_send"
+    },
+    {
+      "source": "note_2",
+      "target": "note_2_bus",
+      "type": "mentions_bus"
+    },
+    {
+      "source": "session",
+      "target": "hidden_1",
+      "type": "has_hidden_state"
+    },
+    {
+      "source": "session",
+      "target": "hidden_2",
+      "type": "has_hidden_state"
+    },
+    {
+      "source": "track_2",
+      "target": "hidden_3",
+      "type": "has_hidden_state"
+    },
+    {
+      "source": "track_3",
+      "target": "hidden_4",
+      "type": "has_hidden_state"
+    },
+    {
+      "source": "track_4",
+      "target": "hidden_5",
+      "type": "has_hidden_state"
+    },
+    {
+      "source": "track_6",
+      "target": "hidden_6",
+      "type": "has_hidden_state"
+    },
+    {
+      "source": "audio_6",
+      "target": "rec_1",
+      "type": "supports_recommendation",
+      "confidence": 0.7
+    },
+    {
+      "source": "audio_7",
+      "target": "rec_2",
+      "type": "supports_recommendation",
+      "confidence": 0.6
+    }
+  ],
+  "metadata": {
+    "num_audio_files": 7,
+    "num_inferred_tracks": 6,
+    "num_descriptors": 0,
+    "num_annotations": 2,
+    "num_hidden_state_markers": 6,
+    "num_recommendations": 2,
+    "num_nodes": 36,
+    "num_edges": 35,
+    "observability_counts": {
+      "observed": 8,
+      "inferred": 6,
+      "annotation": 14,
+      "hidden": 6,
+      "derived": 2
+    },
+    "observability_percentages": {
+      "observed": 22.2,
+      "inferred": 16.7,
+      "annotation": 38.9,
+      "hidden": 16.7,
+      "derived": 5.6
+    }
+  }
+}
