@@ -74,6 +74,23 @@ def cmd_export_bundle(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_export_canonical_bundle(args: argparse.Namespace) -> int:
+    """Export the five-file v0.2 canonical wire bundle (analyzer contract)."""
+    # Imported lazily: needs the optional canonical-snapshot package.
+    from .canonical_export import export_bundle
+
+    result = export_bundle(
+        args.input,
+        args.out,
+        with_descriptors=not getattr(args, "no_descriptors", False),
+        sanitize=not args.no_sanitize,
+        notes_path=args.notes,
+    )
+    print(f"Wrote canonical bundle ({', '.join(result['files'])}) to {result['out_dir']}")
+    print(f"snapshot_id={result['snapshot_id']} valid={result['valid']}")
+    return 0 if result["valid"] else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     # Shared flags, attached to every subcommand so both positions work:
     # `... demo --no-descriptors` and `... --no-descriptors demo`.
@@ -107,6 +124,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_bundle.add_argument("folder", help="Folder containing exported audio files.")
     p_bundle.add_argument("--out", default="bundle.json", help="Output JSON path.")
     p_bundle.set_defaults(func=cmd_export_bundle)
+
+    p_wire = sub.add_parser(
+        "export-canonical-bundle", parents=[common],
+        help="Export the five-file v0.2 canonical snapshot bundle "
+             "(requires the canonical-snapshot package).")
+    p_wire.add_argument("input", help="Evidence folder, session manifest .json, or 'demo'.")
+    p_wire.add_argument("--out", default="exports/canonical",
+                        help="Directory to write the bundle into.")
+    p_wire.add_argument("--notes", help="Optional channel-strip notes CSV/JSON path.")
+    p_wire.add_argument("--no-sanitize", action="store_true",
+                        help="Keep raw home/temp paths in the exported bundle.")
+    p_wire.set_defaults(func=cmd_export_canonical_bundle)
 
     return parser
 
