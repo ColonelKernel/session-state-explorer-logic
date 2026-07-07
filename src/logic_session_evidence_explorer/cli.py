@@ -129,7 +129,11 @@ def build_parser() -> argparse.ArgumentParser:
         "export-canonical-bundle", parents=[common],
         help="Export the five-file v0.2 canonical snapshot bundle "
              "(requires the canonical-snapshot package).")
-    p_wire.add_argument("input", help="Evidence folder, session manifest .json, or 'demo'.")
+    p_wire.add_argument(
+        "input",
+        help="Evidence folder, session manifest .json, 'demo', or 'demo-full' "
+             "(the synthetic full-evidence demo: stems + exact-sum mixdown + "
+             "reference + MIDI + MusicXML + notes).")
     p_wire.add_argument("--out", default="exports/canonical",
                         help="Directory to write the bundle into.")
     p_wire.add_argument("--notes", help="Optional channel-strip notes CSV/JSON path.")
