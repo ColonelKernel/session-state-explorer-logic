@@ -49,12 +49,14 @@ from ..models import (
 )
 
 # The canonical dialect tag (id namespace) and the SourceInfo.daw identifier
-# the exporter uses. flatten_session names its PROJECT entity
-# f"{source.daw}:project", so session-level hidden-state markers are
-# re-targeted at PROJECT_ENTITY_ID here.
+# the exporter uses. flatten_session names its PROJECT entity after the
+# session *dialect* (f"{dialect}:project" -> "logic:project"), NOT source.daw,
+# so session-level hidden-state markers are re-targeted at PROJECT_ENTITY_ID
+# using the dialect namespace to match — otherwise flatten can't find the
+# target entity and the markers degrade to extensions-only.
 DIALECT = "logic"
 DAW_ID = "logic_pro"
-PROJECT_ENTITY_ID = f"{DAW_ID}:project"
+PROJECT_ENTITY_ID = f"{DIALECT}:project"
 
 NATIVE_MODEL_NAME = "SessionEvidence"
 

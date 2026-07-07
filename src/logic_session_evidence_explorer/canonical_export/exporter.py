@@ -249,26 +249,82 @@ def _find_sidecar(folder: str, needle: str, extensions: tuple[str, ...]) -> Opti
     return None
 
 
+def _find_by_extension(folder: str, extensions: tuple[str, ...]) -> Optional[str]:
+    for name in sorted(os.listdir(folder)):
+        if name.lower().endswith(extensions):
+            return os.path.join(folder, name)
+    return None
+
+
+def _looks_like_musicxml(path: str) -> bool:
+    """Cheap root-element sniff so a bare ``.xml`` sidecar (which could be any
+    XML — a plist, a preset) is only treated as MusicXML when it actually is."""
+
+    try:
+        from xml.etree import ElementTree as ET
+
+        for _event, element in ET.iterparse(path, events=("start",)):
+            return element.tag.rsplit("}", 1)[-1] in ("score-partwise", "score-timewise")
+    except Exception:
+        return False
+    return False
+
+
+def _attach_folder_music_evidence(session: SessionEvidence, folder: str) -> None:
+    """Discover MIDI / MusicXML sidecars in an evidence folder.
+
+    The stem scanner only sees audio, so ``.mid``/``.midi`` and
+    ``.musicxml``/``.mxl`` (plus ``.xml`` that sniffs as MusicXML) sidecars are
+    inspected here, before finalization, so MIDI-track / score-part token
+    matching can link them to inferred tracks. Both inspectors carry the
+    repo's guarded-optional-dependency behaviour: a missing ``mido`` /
+    ``music21`` degrades to a warning on the evidence object, never a crash.
+    """
+
+    from .. import midi_inspector, musicxml_inspector
+
+    midi_path = _find_by_extension(folder, (".mid", ".midi"))
+    if midi_path:
+        session.midi_evidence = midi_inspector.inspect_midi(
+            midi_path, file_name=os.path.basename(midi_path)
+        )
+
+    xml_path = _find_by_extension(folder, (".musicxml", ".mxl"))
+    if xml_path is None:
+        candidate = _find_by_extension(folder, (".xml",))
+        if candidate and _looks_like_musicxml(candidate):
+            xml_path = candidate
+    if xml_path:
+        session.musicxml_evidence = musicxml_inspector.inspect_musicxml(
+            xml_path, file_name=os.path.basename(xml_path)
+        )
+
+
 def build_session_from_input(
     input_path: str,
     *,
     notes_path: Optional[str] = None,
     with_descriptors: bool = False,
 ) -> SessionEvidence:
-    """Build a finalized SessionEvidence from a folder, manifest, or "demo".
+    """Build a finalized SessionEvidence from a folder, manifest, or a demo.
 
     - folder: scan its audio files; ``*manifest*.json`` / ``*note*.csv|json``
-      sidecars are picked up automatically (an explicit ``notes_path`` wins).
+      sidecars are picked up automatically (an explicit ``notes_path`` wins),
+      as are MIDI (``.mid``/``.midi``) and MusicXML (``.musicxml``/``.mxl``,
+      or ``.xml`` that sniffs as MusicXML) sidecars.
     - manifest JSON: evidence listed by file name only — honest degraded
       build with no audio on disk.
-    - ``"demo"``: the built-in synthetic demo session (real pipeline, synthetic
-      audio, clearly labelled as such).
+    - ``"demo"``: the built-in small synthetic demo session.
+    - ``"demo-full"``: the synthetic full-evidence demo (stems + exact-sum
+      mixdown + reference + MIDI + MusicXML + notes). Real pipeline,
+      synthetic audio, clearly labelled as such.
     """
 
-    if input_path == "demo":
+    if input_path in ("demo", "demo-full"):
         from .. import demo
 
-        return demo.build_demo_session(with_descriptors=with_descriptors)
+        build = demo.build_full_demo if input_path == "demo-full" else demo.build_demo_session
+        return build(with_descriptors=with_descriptors)
 
     utils.reset_ids()
     if os.path.isdir(input_path):
@@ -283,6 +339,7 @@ def build_session_from_input(
             _apply_notes(session, sidecar_notes)
         if manifest_path:
             _apply_manifest(session, manifest_path)
+        _attach_folder_music_evidence(session, input_path)
     elif input_path.lower().endswith(".json"):
         result = manifest_loader.load_manifest_path(input_path)
         file_names = list(result.role_overrides) + [
@@ -417,13 +474,14 @@ def export_bundle(
     sanitize: bool = True,
     notes_path: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Build from an evidence folder / manifest / "demo" and export the bundle."""
+    """Build from an evidence folder / manifest / "demo" / "demo-full" and
+    export the bundle."""
 
     session = build_session_from_input(
         input_path, notes_path=notes_path, with_descriptors=with_descriptors
     )
     created_at = None
-    if input_path != "demo" and os.path.isfile(input_path):
+    if input_path not in ("demo", "demo-full") and os.path.isfile(input_path):
         created_at = _iso_from_mtime(input_path)
     return export_session_bundle(
         session, out_dir, sanitize=sanitize, created_at=created_at

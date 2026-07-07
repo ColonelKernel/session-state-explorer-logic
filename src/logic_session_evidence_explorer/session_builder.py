@@ -40,6 +40,12 @@ def _hidden_marker(target_id: str, hstype: str, definition: dict) -> HiddenState
 def build_inferred_tracks(session: SessionEvidence) -> list[InferredTrackState]:
     """Create one inferred track per non-mixdown, non-reference stem."""
 
+    # MIDI track names / score part names link to inferred tracks through the
+    # same shared token matcher the graph builder uses for its linked_to_midi /
+    # linked_to_score_part edges, so the model and the graph agree.
+    midi_names = session.midi_evidence.track_names if session.midi_evidence else []
+    part_names = session.musicxml_evidence.part_names if session.musicxml_evidence else []
+
     tracks: list[InferredTrackState] = []
     for audio in session.audio_files:
         if audio.is_mixdown or audio.is_reference:
@@ -69,11 +75,14 @@ def build_inferred_tracks(session: SessionEvidence) -> list[InferredTrackState]:
         ]
         hidden_fields = observation_model.hidden_fields_for_track(annotated_fields)
 
+        track_name = audio.inferred_track_name or audio.file_name
         track = InferredTrackState(
             id=utils.make_id("track"),
-            name=audio.inferred_track_name or audio.file_name,
+            name=track_name,
             role=audio.inferred_role,
             source_audio_id=audio.id,
+            linked_midi_track_names=[n for n in midi_names if names_match(n, track_name)],
+            linked_musicxml_parts=[p for p in part_names if names_match(p, track_name)],
             channel_strip_note_ids=note_ids,
             descriptor_id=audio.descriptor_id,
             confidence=audio.confidence,

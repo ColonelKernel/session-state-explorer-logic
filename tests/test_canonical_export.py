@@ -299,3 +299,70 @@ def test_export_demo_via_input_keyword(tmp_path):
     result = export_bundle("demo", str(tmp_path / "bundle"))
     assert result["valid"] is True
     assert result["snapshot_id"].startswith("logic_pro:sha256:")
+
+
+# --------------------------------------------------------------------------- #
+# Folder mode: MIDI / MusicXML sidecar discovery
+# --------------------------------------------------------------------------- #
+def _make_evidence_folder(tmp_path):
+    """Two real stems plus MIDI / MusicXML / decoy-XML sidecars on disk."""
+
+    folder = tmp_path / "evidence"
+    folder.mkdir()
+    demo._write_synth_wav(str(folder / "Bass DI.wav"), "tone", 55.0)
+    demo._write_synth_wav(str(folder / "Piano.wav"), "tone", 261.0)
+    (folder / "session.mid").write_bytes(demo.build_full_demo_midi_bytes())
+    (folder / "score.musicxml").write_text(
+        demo.build_full_demo_musicxml(), encoding="utf-8"
+    )
+    # A bare .xml that is NOT MusicXML must never be mistaken for a score.
+    (folder / "settings.xml").write_text(
+        '<?xml version="1.0"?><plist><dict/></plist>', encoding="utf-8"
+    )
+    return folder
+
+
+def test_folder_mode_discovers_midi_and_musicxml_sidecars(tmp_path):
+    folder = _make_evidence_folder(tmp_path)
+    session = exporter.build_session_from_input(str(folder), with_descriptors=False)
+
+    # A real .mid on disk becomes MidiEvidence (with mido parsed track names;
+    # without mido the object still exists and carries the degradation warning).
+    assert session.midi_evidence is not None
+    assert session.musicxml_evidence is not None
+    assert session.musicxml_evidence.part_names == demo.FULL_DEMO_MUSICXML_PARTS
+
+    import importlib.util
+
+    if importlib.util.find_spec("mido") is not None:
+        assert "Bass DI" in session.midi_evidence.track_names
+        by_name = {t.name: t for t in session.inferred_tracks}
+        # Evidence linking ran before finalization: token matching connected
+        # the MIDI tracks / score parts to the inferred tracks.
+        assert by_name["Bass DI"].linked_midi_track_names == ["Bass DI"]
+        assert by_name["Piano"].linked_musicxml_parts == ["Piano"]
+    else:
+        assert session.midi_evidence.warnings
+
+
+def test_folder_mode_ignores_non_musicxml_xml(tmp_path):
+    folder = tmp_path / "evidence"
+    folder.mkdir()
+    demo._write_synth_wav(str(folder / "Bass DI.wav"), "tone", 55.0)
+    (folder / "settings.xml").write_text(
+        '<?xml version="1.0"?><plist><dict/></plist>', encoding="utf-8"
+    )
+    session = exporter.build_session_from_input(str(folder), with_descriptors=False)
+    assert session.midi_evidence is None
+    assert session.musicxml_evidence is None
+
+
+def test_folder_mode_bundle_with_music_sidecars_validates(tmp_path):
+    folder = _make_evidence_folder(tmp_path)
+    result = export_bundle(str(folder), str(tmp_path / "bundle"))
+    assert result["valid"] is True
+    native = json.load(
+        open(tmp_path / "bundle" / "native.json", encoding="utf-8")
+    )
+    assert native["model"]["midi_evidence"] is not None
+    assert native["model"]["musicxml_evidence"] is not None
