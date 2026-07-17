@@ -2,6 +2,10 @@
 
 *Interpretable DAW-state graphs from Logic Pro exports and partial session evidence.*
 
+[![Live workbench](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://session-state-analyzer-n2lj2kmjjijdzta7oarpyt.streamlit.app/)
+
+**[Live demo](https://session-state-analyzer-n2lj2kmjjijdzta7oarpyt.streamlit.app/)** — this adapter's canonical bundles rendered in the Session State Analyzer workbench (no install).
+
 A research prototype exploring **Interpretable DAW-State Graphs for
 Human-Centered AI-Assisted Music Production** — prepared in the context of a
 preliminary PhD application to the Music Technology Group (MTG), Universitat
